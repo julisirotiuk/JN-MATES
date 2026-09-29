@@ -23,9 +23,8 @@ export default function Tienda() {
   useEffect(() => {
     (async () => {
       const { data } = await supabase
-        .from("productos")
-        .select("*,categorias(nombre)")
-        .eq("activo", true)
+        .from("productos_publicos")
+        .select("*")
         .order("nombre", { ascending: true });
       setProductos(data || []);
       setLoading(false);
@@ -33,12 +32,12 @@ export default function Tienda() {
   }, []);
 
   const categorias = useMemo(() => {
-    const nombres = new Set(productos.map((p) => p.categorias?.nombre).filter(Boolean));
+    const nombres = new Set(productos.map((p) => p.categoria_nombre).filter(Boolean));
     return ["Todas", ...Array.from(nombres).sort()];
   }, [productos]);
 
   const filtrados = useMemo(
-    () => (cat === "Todas" ? productos : productos.filter((p) => p.categorias?.nombre === cat)),
+    () => (cat === "Todas" ? productos : productos.filter((p) => p.categoria_nombre === cat)),
     [productos, cat]
   );
 
@@ -57,7 +56,10 @@ export default function Tienda() {
 
       <div className="jn-root" style={styles.shell}>
         <header style={styles.header}>
-          <div className="jn-serif" style={styles.logo}>JN Mates</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <img src="/logo.png" alt="JN Mates" style={{ width: 38, height: 38, borderRadius: 8, objectFit: "cover" }} />
+            <div className="jn-serif" style={styles.logo}>JN Mates</div>
+          </div>
           <button className="jn-btn" style={styles.cartBtn} onClick={() => setCartOpen(true)}>
             <ShoppingBag size={19} />
             {cart.cantidadTotal > 0 && <span style={styles.cartBadge}>{cart.cantidadTotal}</span>}
