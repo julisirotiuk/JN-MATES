@@ -82,9 +82,7 @@ export default function Tienda() {
         {/* Header */}
         <header style={styles.header}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={styles.logoContainer}>
-              <img src="/logo.jpeg" alt="JN MATES" style={styles.logoImg} />
-            </div>
+            <img src="/logo.jpeg" alt="JN MATES" style={styles.logoImg} />
             <div>
               <div className="jn-display" style={styles.logoText}>JN MATES</div>
               <div style={styles.tagline}>Encontrá tu mate perfecto</div>
@@ -274,20 +272,9 @@ const styles = {
     alignItems: "center",
     padding: "24px 0 16px",
   },
-  logoContainer: {
+  logoImg: {
     width: 48,
     height: 48,
-    borderRadius: "50%",
-    background: "#fff",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 4,
-    boxShadow: "0 2px 12px rgba(0, 0, 0, 0.08)",
-  },
-  logoImg: {
-    width: "100%",
-    height: "100%",
     borderRadius: "50%",
     objectFit: "cover",
   },
