@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { ShoppingBag, Plus, Minus, X, Loader2 } from "lucide-react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { ShoppingBag, Plus, Minus, X, Loader2, Sparkles, MoreVertical, Home } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { useCart } from "@/lib/CartContext";
 import Link from "next/link";
@@ -18,6 +18,8 @@ export default function Tienda() {
   const [loading, setLoading] = useState(true);
   const [cat, setCat] = useState("Todas");
   const [cartOpen, setCartOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
   const cart = useCart();
 
   useEffect(() => {
@@ -31,6 +33,16 @@ export default function Tienda() {
     })();
   }, []);
 
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const categorias = useMemo(() => {
     const nombres = new Set(productos.map((p) => p.categoria_nombre).filter(Boolean));
     return ["Todas", ...Array.from(nombres).sort()];
@@ -41,78 +53,138 @@ export default function Tienda() {
     [productos, cat]
   );
 
+  const irA = (c) => {
+    setCat(c);
+    setMenuOpen(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   return (
     <div style={styles.appBg}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
         * { box-sizing: border-box; }
-        .jn-root { font-family: 'Inter', system-ui, sans-serif; color: #f0ece0; }
-        .jn-serif { font-family: 'Fraunces', serif; }
-        .jn-btn { border: none; border-radius: 10px; font-weight: 600; cursor: pointer; transition: transform .08s ease; }
-        .jn-btn:active { transform: scale(0.96); }
+        .jn-root { font-family: 'Outfit', system-ui, sans-serif; color: #f0ece0; }
+        .jn-display { font-family: 'Space Grotesk', sans-serif; }
+        .jn-btn { border: none; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all .15s ease; }
+        .jn-btn:active { transform: scale(0.95); }
         .jn-spin { animation: jn-spin 0.8s linear infinite; }
         @keyframes jn-spin { to { transform: rotate(360deg); } }
+        .jn-card { transition: all .2s ease; }
+        .jn-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.3); }
+        .jn-chip { transition: all .15s ease; }
+        .jn-chip:hover { transform: scale(1.05); }
+        .jn-menu-item { transition: all .15s ease; }
+        .jn-menu-item:hover { background: rgba(123, 161, 90, 0.1); }
       `}</style>
 
       <div className="jn-root" style={styles.shell}>
+        {/* Header */}
         <header style={styles.header}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <img src="/logo.png" alt="JN Mates" style={{ width: 38, height: 38, borderRadius: 8, objectFit: "cover" }} />
-            <div className="jn-serif" style={styles.logo}>JN Mates</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={styles.logoContainer}>
+              <img src="/logo.jpeg" alt="JN MATES" style={styles.logoImg} />
+            </div>
+            <div>
+              <div className="jn-display" style={styles.logoText}>JN MATES</div>
+              <div style={styles.tagline}>Encontrá tu mate perfecto</div>
+            </div>
           </div>
-          <button className="jn-btn" style={styles.cartBtn} onClick={() => setCartOpen(true)}>
-            <ShoppingBag size={19} />
-            {cart.cantidadTotal > 0 && <span style={styles.cartBadge}>{cart.cantidadTotal}</span>}
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {/* Menú de 3 puntitos */}
+            <div ref={menuRef} style={{ position: "relative" }}>
+              <button className="jn-btn" style={styles.menuBtn} onClick={() => setMenuOpen(!menuOpen)}>
+                <MoreVertical size={20} />
+              </button>
+              {menuOpen && (
+                <div style={styles.dropdown}>
+                  <button className="jn-menu-item" style={styles.dropdownItem} onClick={() => irA("Todas")}>
+                    <Home size={16} />
+                    <span>Inicio</span>
+                  </button>
+                  {categorias.filter((c) => c !== "Todas").map((c) => (
+                    <button key={c} className="jn-menu-item" style={styles.dropdownItem} onClick={() => irA(c)}>
+                      <span style={{ width: 16, textAlign: "center", fontSize: 12 }}>•</span>
+                      <span>{c}</span>
+                    </button>
+                  ))}
+                  <button className="jn-menu-item" style={styles.dropdownItem} onClick={() => irA("Todas")}>
+                    <span style={{ width: 16, textAlign: "center", fontSize: 12 }}>•</span>
+                    <span>Todas</span>
+                  </button>
+                </div>
+              )}
+            </div>
+            {/* Carrito */}
+            <button className="jn-btn" style={styles.cartBtn} onClick={() => setCartOpen(true)}>
+              <ShoppingBag size={20} />
+              {cart.cantidadTotal > 0 && <span style={styles.cartBadge}>{cart.cantidadTotal}</span>}
+            </button>
+          </div>
         </header>
 
-        <div style={styles.catScroll}>
-          {categorias.map((c) => (
-            <button
-              key={c}
-              className="jn-btn"
-              style={styles.chip(cat === c)}
-              onClick={() => setCat(c)}
-            >
-              {c}
-            </button>
-          ))}
+        {/* Hero */}
+        <div style={styles.hero}>
+          <div style={styles.heroContent}>
+            <div style={styles.heroBadge}>
+              <Sparkles size={14} /> Calidad premium
+            </div>
+            <h1 className="jn-display" style={styles.heroTitle}>
+              Mates únicos,<br />
+              <span style={styles.heroHighlight}>experiencias reales</span>
+            </h1>
+            <p style={styles.heroDesc}>
+              Amor y dedicación en cada producto, para acompañarte en tus mejores momentos.
+            </p>
+          </div>
         </div>
 
+        {/* Grid de productos */}
         <main style={styles.grid}>
           {loading ? (
             <div style={styles.centerLoading}>
-              <Loader2 size={26} className="jn-spin" color="#a9b8a9" />
+              <Loader2 size={32} className="jn-spin" color="#a9b8a9" />
             </div>
           ) : filtrados.length === 0 ? (
-            <div style={{ color: "#8fa085", textAlign: "center", padding: 40 }}>
-              No hay productos en esta categoría por ahora.
+            <div style={styles.emptyState}>
+              <div style={{ fontSize: 48, marginBottom: 12 }}>🧉</div>
+              <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>No hay productos</div>
+              <div style={{ fontSize: 13, color: "#8fa085" }}>En esta categoría por ahora</div>
             </div>
           ) : (
             filtrados.map((p) => (
-              <div key={p.id} style={styles.card}>
+              <div key={p.id} className="jn-card" style={styles.card}>
                 <div style={styles.cardImg}>
                   {p.imagen_url ? (
                     <img src={p.imagen_url} alt={p.nombre} style={styles.img} />
                   ) : (
-                    <span style={{ fontSize: 26, opacity: 0.35 }}>🧉</span>
+                    <div style={styles.imgPlaceholder}>
+                      <span style={{ fontSize: 40 }}>🧉</span>
+                    </div>
+                  )}
+                  {p.stock <= 0 && (
+                    <div style={styles.soldOutOverlay}>
+                      <span style={styles.soldOutText}>AGOTADO</span>
+                    </div>
                   )}
                 </div>
-                <div style={{ padding: "10px 12px 12px" }}>
+                <div style={styles.cardContent}>
                   <div style={styles.cardName}>{p.nombre}</div>
                   {p.material && <div style={styles.cardMeta}>{p.material}</div>}
                   <div style={styles.cardBottom}>
-                    <span className="jn-serif" style={styles.cardPrice}>{money(p.precio)}</span>
-                    {p.stock <= 0 ? (
-                      <span style={styles.soldOut}>Sin stock</span>
-                    ) : (
+                    <div style={styles.priceContainer}>
+                      <span className="jn-display" style={styles.cardPrice}>{money(p.precio)}</span>
+                    </div>
+                    {p.stock > 0 ? (
                       <button
                         className="jn-btn"
                         style={styles.addBtn}
                         onClick={() => cart.addItem(p, 1)}
                       >
-                        <Plus size={15} />
+                        <Plus size={16} />
                       </button>
+                    ) : (
+                      <span style={styles.soldOutBadge}>Sin stock</span>
                     )}
                   </div>
                 </div>
@@ -120,35 +192,47 @@ export default function Tienda() {
             ))
           )}
         </main>
+
+        {/* Footer */}
+        <footer style={styles.footer}>
+          <div style={styles.footerLogo}>JN MATES</div>
+          <div style={styles.footerText}>Calidad que se nota</div>
+        </footer>
       </div>
 
+      {/* Carrito */}
       {cartOpen && (
         <div style={styles.overlay} onClick={() => setCartOpen(false)}>
           <div style={styles.drawer} onClick={(e) => e.stopPropagation()}>
             <div style={styles.drawerHeader}>
-              <span className="jn-serif" style={{ fontSize: 19, fontWeight: 700 }}>Tu carrito</span>
+              <div>
+                <div className="jn-display" style={styles.drawerTitle}>Tu carrito</div>
+                <div style={styles.drawerSubtitle}>{cart.cantidadTotal} productos</div>
+              </div>
               <button className="jn-btn" style={styles.iconBtn} onClick={() => setCartOpen(false)}>
-                <X size={19} />
+                <X size={20} />
               </button>
             </div>
 
             {cart.items.length === 0 ? (
-              <div style={{ color: "#8fa085", padding: "30px 0", textAlign: "center" }}>
-                Todavía no agregaste nada.
+              <div style={styles.emptyCart}>
+                <div style={{ fontSize: 48, marginBottom: 12 }}>🛒</div>
+                <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Carrito vacío</div>
+                <div style={{ fontSize: 13, color: "#8fa085" }}>Agregá productos para continuar</div>
               </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 10, overflowY: "auto" }}>
+              <div style={styles.cartItems}>
                 {cart.items.map((i) => (
                   <div key={i.id} style={styles.cartRow}>
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <div style={styles.cardName}>{i.nombre}</div>
-                      <div style={styles.cardMeta}>{money(i.precio)} c/u</div>
+                    <div style={styles.cartItemInfo}>
+                      <div style={styles.cartItemName}>{i.nombre}</div>
+                      <div style={styles.cartItemPrice}>{money(i.precio)} c/u</div>
                     </div>
                     <div style={styles.stepper}>
                       <button className="jn-btn" style={styles.stepBtn} onClick={() => cart.setCantidad(i.id, i.cantidad - 1)}>
                         <Minus size={14} />
                       </button>
-                      <span style={{ minWidth: 18, textAlign: "center", fontWeight: 700 }}>{i.cantidad}</span>
+                      <span style={styles.stepperValue}>{i.cantidad}</span>
                       <button className="jn-btn" style={styles.stepBtn} onClick={() => cart.setCantidad(i.id, i.cantidad + 1)}>
                         <Plus size={14} />
                       </button>
@@ -160,12 +244,14 @@ export default function Tienda() {
 
             {cart.items.length > 0 && (
               <div style={styles.drawerFooter}>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15 }}>
-                  <span style={{ color: "#8fa085" }}>Total</span>
-                  <span className="jn-serif" style={{ fontWeight: 700, fontSize: 19 }}>{money(cart.total)}</span>
+                <div style={styles.totalRow}>
+                  <span style={styles.totalLabel}>Total</span>
+                  <span className="jn-display" style={styles.totalValue}>{money(cart.total)}</span>
                 </div>
                 <Link href="/checkout" style={{ textDecoration: "none" }}>
-                  <button className="jn-btn" style={styles.checkoutBtn}>Finalizar pedido</button>
+                  <button className="jn-btn" style={styles.checkoutBtn}>
+                    Finalizar pedido
+                  </button>
                 </Link>
               </div>
             )}
@@ -177,64 +263,443 @@ export default function Tienda() {
 }
 
 const styles = {
-  appBg: { minHeight: "100vh", background: "#131c15" },
-  shell: { maxWidth: 720, margin: "0 auto", padding: "0 16px 40px" },
-  header: {
-    display: "flex", justifyContent: "space-between", alignItems: "center",
-    padding: "22px 2px 10px",
+  appBg: {
+    minHeight: "100vh",
+    background: "linear-gradient(180deg, #0d1510 0%, #131c15 50%, #0d1510 100%)",
   },
-  logo: { fontSize: 26, fontWeight: 700 },
+  shell: { maxWidth: 720, margin: "0 auto", padding: "0 20px 60px" },
+  header: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "24px 0 16px",
+  },
+  logoContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: "50%",
+    background: "linear-gradient(135deg, #4c8a3f 0%, #7ba15a 100%)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 4,
+    boxShadow: "0 4px 20px rgba(76, 138, 63, 0.3)",
+  },
+  logoImg: {
+    width: "100%",
+    height: "100%",
+    borderRadius: "50%",
+    objectFit: "cover",
+  },
+  logoText: {
+    fontSize: 22,
+    fontWeight: 700,
+    letterSpacing: "0.05em",
+    background: "linear-gradient(135deg, #f0ece0 0%, #d9b968 100%)",
+    WebkitBackgroundClip: "text",
+    WebkitTextFillColor: "transparent",
+  },
+  tagline: {
+    fontSize: 11,
+    color: "#8fa085",
+    fontWeight: 400,
+    letterSpacing: "0.02em",
+  },
+  menuBtn: {
+    background: "rgba(31, 44, 34, 0.8)",
+    backdropFilter: "blur(10px)",
+    border: "1px solid rgba(51, 66, 47, 0.5)",
+    color: "#f0ece0",
+    borderRadius: 14,
+    padding: 12,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dropdown: {
+    position: "absolute",
+    top: "100%",
+    right: 0,
+    marginTop: 8,
+    background: "rgba(22, 32, 26, 0.95)",
+    backdropFilter: "blur(20px)",
+    border: "1px solid rgba(51, 66, 47, 0.5)",
+    borderRadius: 14,
+    padding: 8,
+    minWidth: 180,
+    zIndex: 100,
+    boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+  },
+  dropdownItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    width: "100%",
+    padding: "10px 14px",
+    background: "none",
+    border: "none",
+    borderRadius: 8,
+    color: "#f0ece0",
+    fontSize: 14,
+    fontWeight: 500,
+    cursor: "pointer",
+    textAlign: "left",
+  },
   cartBtn: {
-    position: "relative", background: "#1f2c22", border: "1px solid #33422f",
-    color: "#f0ece0", borderRadius: 10, padding: "9px 11px", display: "flex",
+    position: "relative",
+    background: "rgba(31, 44, 34, 0.8)",
+    backdropFilter: "blur(10px)",
+    border: "1px solid rgba(51, 66, 47, 0.5)",
+    color: "#f0ece0",
+    borderRadius: 14,
+    padding: 12,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
   cartBadge: {
-    position: "absolute", top: -6, right: -6, background: "#d9924b", color: "#16201a",
-    fontSize: 10.5, fontWeight: 800, borderRadius: 999, minWidth: 17, height: 17,
-    display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px",
+    position: "absolute",
+    top: -6,
+    right: -6,
+    background: "linear-gradient(135deg, #d9924b 0%, #e8a85c 100%)",
+    color: "#16201a",
+    fontSize: 11,
+    fontWeight: 700,
+    borderRadius: 999,
+    minWidth: 20,
+    height: 20,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "0 4px",
+    boxShadow: "0 2px 8px rgba(217, 146, 75, 0.4)",
   },
-  catScroll: { display: "flex", gap: 8, overflowX: "auto", padding: "2px 2px 14px" },
+  hero: {
+    background: "linear-gradient(135deg, rgba(76, 138, 63, 0.15) 0%, rgba(123, 161, 90, 0.1) 100%)",
+    borderRadius: 20,
+    padding: "32px 24px",
+    marginBottom: 24,
+    border: "1px solid rgba(123, 161, 90, 0.2)",
+    position: "relative",
+    overflow: "hidden",
+  },
+  heroContent: {
+    position: "relative",
+    zIndex: 1,
+  },
+  heroBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+    background: "rgba(123, 161, 90, 0.2)",
+    color: "#7ba15a",
+    fontSize: 11,
+    fontWeight: 600,
+    padding: "6px 12px",
+    borderRadius: 999,
+    marginBottom: 16,
+    border: "1px solid rgba(123, 161, 90, 0.3)",
+  },
+  heroTitle: {
+    fontSize: 28,
+    fontWeight: 700,
+    lineHeight: 1.2,
+    marginBottom: 12,
+    letterSpacing: "-0.02em",
+  },
+  heroHighlight: {
+    background: "linear-gradient(135deg, #7ba15a 0%, #a9c48a 100%)",
+    WebkitBackgroundClip: "text",
+    WebkitTextFillColor: "transparent",
+  },
+  heroDesc: {
+    fontSize: 14,
+    color: "#8fa085",
+    lineHeight: 1.5,
+    maxWidth: 400,
+  },
+  catScroll: {
+    display: "flex",
+    gap: 10,
+    overflowX: "auto",
+    padding: "4px 0 20px",
+    scrollbarWidth: "none",
+  },
   chip: (active) => ({
-    flexShrink: 0, padding: "8px 16px", fontSize: 13, borderRadius: 999,
-    background: active ? "#4c5f2e" : "#1f2c22", color: active ? "#f0ece0" : "#8fa085",
-    border: active ? "1px solid #7ba15a" : "1px solid #33422f",
+    flexShrink: 0,
+    padding: "10px 20px",
+    fontSize: 13,
+    borderRadius: 999,
+    fontWeight: 600,
+    background: active
+      ? "linear-gradient(135deg, #4c8a3f 0%, #5a9a4a 100%)"
+      : "rgba(31, 44, 34, 0.6)",
+    color: active ? "#f0ece0" : "#8fa085",
+    border: active ? "1px solid rgba(123, 161, 90, 0.5)" : "1px solid rgba(51, 66, 47, 0.4)",
+    backdropFilter: "blur(10px)",
   }),
   grid: {
-    display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
-    gap: 12,
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+    gap: 16,
   },
-  centerLoading: { gridColumn: "1/-1", display: "flex", justifyContent: "center", padding: 50 },
-  card: { background: "#1f2c22", border: "1px solid #33422f", borderRadius: 14, overflow: "hidden" },
+  centerLoading: {
+    gridColumn: "1/-1",
+    display: "flex",
+    justifyContent: "center",
+    padding: 60,
+  },
+  emptyState: {
+    gridColumn: "1/-1",
+    textAlign: "center",
+    padding: "60px 20px",
+    color: "#8fa085",
+  },
+  card: {
+    background: "rgba(31, 44, 34, 0.5)",
+    border: "1px solid rgba(51, 66, 47, 0.3)",
+    borderRadius: 16,
+    overflow: "hidden",
+    backdropFilter: "blur(10px)",
+  },
   cardImg: {
-    aspectRatio: "1", background: "#182119", display: "flex",
-    alignItems: "center", justifyContent: "center",
+    aspectRatio: "1",
+    background: "linear-gradient(135deg, #1a251e 0%, #1f2c22 100%)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
   },
-  img: { width: "100%", height: "100%", objectFit: "cover" },
+  img: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+  },
+  imgPlaceholder: {
+    width: "100%",
+    height: "100%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    opacity: 0.4,
+  },
+  soldOutOverlay: {
+    position: "absolute",
+    inset: 0,
+    background: "rgba(13, 21, 16, 0.8)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    backdropFilter: "blur(2px)",
+  },
+  soldOutText: {
+    color: "#e08a7d",
+    fontSize: 12,
+    fontWeight: 700,
+    letterSpacing: "0.1em",
+  },
+  cardContent: {
+    padding: "14px 14px 16px",
+  },
   cardName: {
-    fontSize: 13.5, fontWeight: 600, color: "#f0ece0", lineHeight: 1.25,
-    display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
+    fontSize: 14,
+    fontWeight: 600,
+    color: "#f0ece0",
+    lineHeight: 1.3,
+    display: "-webkit-box",
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: "vertical",
+    overflow: "hidden",
+    marginBottom: 4,
   },
-  cardMeta: { fontSize: 11.5, color: "#8fa085", marginTop: 2, textTransform: "capitalize" },
-  cardBottom: { display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 },
-  cardPrice: { fontSize: 15, fontWeight: 700, color: "#d9b968" },
-  addBtn: { background: "#4c8a3f", color: "#f0ece0", width: 28, height: 28, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" },
-  soldOut: { fontSize: 11, color: "#e08a7d", fontWeight: 600 },
+  cardMeta: {
+    fontSize: 11,
+    color: "#8fa085",
+    textTransform: "capitalize",
+    marginBottom: 10,
+  },
+  cardBottom: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  priceContainer: {
+    display: "flex",
+    alignItems: "baseline",
+    gap: 4,
+  },
+  cardPrice: {
+    fontSize: 18,
+    fontWeight: 700,
+    color: "#d9b968",
+    letterSpacing: "-0.01em",
+  },
+  addBtn: {
+    background: "linear-gradient(135deg, #4c8a3f 0%, #5a9a4a 100%)",
+    color: "#f0ece0",
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    boxShadow: "0 4px 12px rgba(76, 138, 63, 0.3)",
+  },
+  soldOutBadge: {
+    fontSize: 11,
+    color: "#e08a7d",
+    fontWeight: 600,
+  },
+  footer: {
+    marginTop: 60,
+    padding: "32px 0",
+    textAlign: "center",
+    borderTop: "1px solid rgba(51, 66, 47, 0.3)",
+  },
+  footerLogo: {
+    fontSize: 16,
+    fontWeight: 700,
+    letterSpacing: "0.1em",
+    marginBottom: 8,
+    background: "linear-gradient(135deg, #f0ece0 0%, #d9b968 100%)",
+    WebkitBackgroundClip: "text",
+    WebkitTextFillColor: "transparent",
+  },
+  footerText: {
+    fontSize: 12,
+    color: "#8fa085",
+  },
   overlay: {
-    position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex",
-    justifyContent: "flex-end", zIndex: 50,
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,0.6)",
+    display: "flex",
+    justifyContent: "flex-end",
+    zIndex: 50,
+    backdropFilter: "blur(4px)",
   },
   drawer: {
-    width: "100%", maxWidth: 380, height: "100%", background: "#16201a",
-    borderLeft: "1px solid #33422f", padding: 18, display: "flex", flexDirection: "column",
+    width: "100%",
+    maxWidth: 400,
+    height: "100%",
+    background: "linear-gradient(180deg, #16201a 0%, #1a251e 100%)",
+    borderLeft: "1px solid rgba(51, 66, 47, 0.5)",
+    padding: 20,
+    display: "flex",
+    flexDirection: "column",
   },
-  drawerHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
-  iconBtn: { background: "none", color: "#8fa085", padding: 4 },
+  drawerHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 20,
+  },
+  drawerTitle: {
+    fontSize: 20,
+    fontWeight: 700,
+  },
+  drawerSubtitle: {
+    fontSize: 12,
+    color: "#8fa085",
+    marginTop: 2,
+  },
+  iconBtn: {
+    background: "rgba(31, 44, 34, 0.6)",
+    color: "#8fa085",
+    padding: 8,
+    borderRadius: 10,
+  },
+  emptyCart: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#8fa085",
+  },
+  cartItems: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 12,
+    overflowY: "auto",
+    flex: 1,
+  },
   cartRow: {
-    display: "flex", justifyContent: "space-between", alignItems: "center",
-    background: "#1f2c22", border: "1px solid #33422f", borderRadius: 10, padding: "10px 12px", gap: 8,
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    background: "rgba(31, 44, 34, 0.5)",
+    border: "1px solid rgba(51, 66, 47, 0.3)",
+    borderRadius: 12,
+    padding: "12px 14px",
+    gap: 12,
   },
-  stepper: { display: "flex", alignItems: "center", gap: 8, flexShrink: 0 },
-  stepBtn: { width: 26, height: 26, borderRadius: 7, background: "#2a3a26", color: "#f0ece0", display: "flex", alignItems: "center", justifyContent: "center" },
-  drawerFooter: { marginTop: "auto", paddingTop: 14, borderTop: "1px solid #33422f", display: "flex", flexDirection: "column", gap: 12 },
-  checkoutBtn: { background: "#4c8a3f", color: "#f0ece0", padding: "13px", fontSize: 15 },
+  cartItemInfo: {
+    minWidth: 0,
+    flex: 1,
+  },
+  cartItemName: {
+    fontSize: 14,
+    fontWeight: 600,
+    color: "#f0ece0",
+    marginBottom: 2,
+  },
+  cartItemPrice: {
+    fontSize: 12,
+    color: "#8fa085",
+  },
+  stepper: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    flexShrink: 0,
+  },
+  stepBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    background: "rgba(42, 58, 38, 0.8)",
+    color: "#f0ece0",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepperValue: {
+    minWidth: 20,
+    textAlign: "center",
+    fontWeight: 700,
+    fontSize: 14,
+  },
+  drawerFooter: {
+    marginTop: "auto",
+    paddingTop: 16,
+    borderTop: "1px solid rgba(51, 66, 47, 0.3)",
+    display: "flex",
+    flexDirection: "column",
+    gap: 14,
+  },
+  totalRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  totalLabel: {
+    color: "#8fa085",
+    fontSize: 14,
+  },
+  totalValue: {
+    fontWeight: 700,
+    fontSize: 22,
+    color: "#d9b968",
+    letterSpacing: "-0.01em",
+  },
+  checkoutBtn: {
+    background: "linear-gradient(135deg, #4c8a3f 0%, #5a9a4a 100%)",
+    color: "#f0ece0",
+    padding: "14px",
+    fontSize: 15,
+    fontWeight: 600,
+    borderRadius: 12,
+    boxShadow: "0 4px 20px rgba(76, 138, 63, 0.3)",
+  },
 };

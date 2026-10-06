@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   Pencil, Trash2, Plus, LogOut, Loader2, Search,
-  Home, Package, PackagePlus, ShoppingCart, AlertTriangle,
+  Home, Package, PackagePlus, ShoppingCart, AlertTriangle, Leaf, TrendingUp, ClipboardList,
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -31,6 +31,7 @@ export default function AdminPanel() {
   const [checkingSession, setCheckingSession] = useState(true);
   const [tab, setTab] = useState("resumen");
   const [loading, setLoading] = useState(true);
+  const [usuarioActual, setUsuarioActual] = useState("");
 
   const [productos, setProductos] = useState([]);
   const [categorias, setCategorias] = useState([]);
@@ -46,6 +47,7 @@ export default function AdminPanel() {
         router.replace("/admin/login");
         return;
       }
+      setUsuarioActual(data.session.user.email || "Usuario");
       setCheckingSession(false);
     })();
   }, [router]);
@@ -90,7 +92,7 @@ export default function AdminPanel() {
       <div style={styles.shell}>
         <header style={styles.header}>
           <div style={styles.logoRow}>
-            <img src="/logo.png" alt="JN Mates" style={styles.logoImg} />
+            <img src="/logo.jpeg" alt="JN Mates" style={styles.logoImg} />
             <div>
               <div style={styles.logo}>JN Mates</div>
               <div style={styles.subtitle}>Panel privado</div>
@@ -104,18 +106,27 @@ export default function AdminPanel() {
         {loading ? (
           <div style={styles.centerFull}><Loader2 size={26} color="#a9b8a9" /></div>
         ) : tab === "resumen" ? (
-          <TabResumen productos={productos} ventas={ventas} compras={compras} gastos={gastos} />
+          <TabResumen
+            productos={productos}
+            ventas={ventas}
+            compras={compras}
+            gastos={gastos}
+            categorias={categorias}
+          />
+        ) : tab === "registro" ? (
+          <TabRegistro ventas={ventas} />
         ) : tab === "stock" ? (
           <TabStock productos={productos} categorias={categorias} onRefresh={cargarTodo} />
         ) : tab === "comprar" ? (
           <TabComprar productos={productos} onRefresh={cargarTodo} />
         ) : (
-          <TabVender productos={productos} onRefresh={cargarTodo} />
+          <TabVender productos={productos} onRefresh={cargarTodo} usuarioActual={usuarioActual} />
         )}
       </div>
 
       <nav style={styles.navBar}>
         <NavBtn icon={Home} label="Resumen" active={tab === "resumen"} onClick={() => setTab("resumen")} />
+        <NavBtn icon={ClipboardList} label="Registro" active={tab === "registro"} onClick={() => setTab("registro")} />
         <NavBtn icon={Package} label="Stock" active={tab === "stock"} onClick={() => setTab("stock")} />
         <NavBtn icon={PackagePlus} label="Comprar" active={tab === "comprar"} onClick={() => setTab("comprar")} />
         <NavBtn icon={ShoppingCart} label="Vender" active={tab === "vender"} onClick={() => setTab("vender")} />
@@ -134,9 +145,9 @@ function NavBtn({ icon: Icon, label, active, onClick }) {
 }
 
 // ============================================================
-// RESUMEN
+// RESUMEN — Ventas separadas Yerba vs Resto, Compras/Gastos generales
 // ============================================================
-function TabResumen({ productos, ventas, compras, gastos }) {
+function TabResumen({ productos, ventas, compras, gastos, categorias }) {
   const invertido = productos.reduce((s, p) => s + Number(p.costo || 0) * Number(p.stock || 0), 0);
   const valorVenta = productos.reduce((s, p) => s + Number(p.precio || 0) * Number(p.stock || 0), 0);
   const gananciaPotencial = valorVenta - invertido;
@@ -144,7 +155,20 @@ function TabResumen({ productos, ventas, compras, gastos }) {
 
   const stockBajo = productos.filter((p) => Number(p.stock || 0) <= 2 && p.activo);
 
-  const caja = useMemo(() => {
+  // Clasificar ventas por categoría
+  const ventasYerba = ventas.filter((v) => {
+    const prod = productos.find((p) => p.id === v.producto_id);
+    const cat = prod ? categorias.find((c) => c.id === prod.categoria_id) : null;
+    return cat?.nombre === "Yerba";
+  });
+  const ventasResto = ventas.filter((v) => {
+    const prod = productos.find((p) => p.id === v.producto_id);
+    const cat = prod ? categorias.find((c) => c.id === prod.categoria_id) : null;
+    return cat?.nombre !== "Yerba";
+  });
+
+  // Control de caja GENERAL (todo junto: ventas + compras + gastos)
+  const cajaGeneral = useMemo(() => {
     const base = {};
     MEDIOS.forEach((m) => (base[m.id] = { entra: 0, sale: 0 }));
     ventas.forEach((v) => {
@@ -159,10 +183,49 @@ function TabResumen({ productos, ventas, compras, gastos }) {
     return base;
   }, [ventas, compras, gastos]);
 
+  // Control de caja YERBA (solo ventas de yerba)
+  const cajaYerba = useMemo(() => {
+    const base = {};
+    MEDIOS.forEach((m) => (base[m.id] = { entra: 0, sale: 0 }));
+    ventasYerba.forEach((v) => {
+      if (base[v.medio_pago]) base[v.medio_pago].entra += Number(v.precio_unitario) * Number(v.cantidad);
+    });
+    return base;
+  }, [ventasYerba]);
+
+  // Control de caja RESTO (solo ventas de resto)
+  const cajaResto = useMemo(() => {
+    const base = {};
+    MEDIOS.forEach((m) => (base[m.id] = { entra: 0, sale: 0 }));
+    ventasResto.forEach((v) => {
+      if (base[v.medio_pago]) base[v.medio_pago].entra += Number(v.precio_unitario) * Number(v.cantidad);
+    });
+    return base;
+  }, [ventasResto]);
+
+  // Ganancia real = valor a la venta - costo del producto
   const totalVendidoHistorico = ventas.reduce((s, v) => s + Number(v.precio_unitario) * Number(v.cantidad), 0);
-  const totalCompradoHistorico = compras.reduce((s, c) => s + Number(c.costo_unitario) * Number(c.cantidad), 0);
-  const totalGastadoHistorico = gastos.reduce((s, g) => s + Number(g.monto), 0);
-  const gananciaReal = totalVendidoHistorico - totalCompradoHistorico - totalGastadoHistorico;
+  const totalCostoHistorico = ventas.reduce((s, v) => {
+    const prod = productos.find((p) => p.id === v.producto_id);
+    return s + (Number(prod?.costo || 0) * Number(v.cantidad));
+  }, 0);
+  const gananciaReal = totalVendidoHistorico - totalCostoHistorico;
+
+  // Totales Yerba
+  const vendidoYerba = ventasYerba.reduce((s, v) => s + Number(v.precio_unitario) * Number(v.cantidad), 0);
+  const costoYerba = ventasYerba.reduce((s, v) => {
+    const prod = productos.find((p) => p.id === v.producto_id);
+    return s + (Number(prod?.costo || 0) * Number(v.cantidad));
+  }, 0);
+  const gananciaYerba = vendidoYerba - costoYerba;
+
+  // Totales Resto
+  const vendidoResto = ventasResto.reduce((s, v) => s + Number(v.precio_unitario) * Number(v.cantidad), 0);
+  const costoResto = ventasResto.reduce((s, v) => {
+    const prod = productos.find((p) => p.id === v.producto_id);
+    return s + (Number(prod?.costo || 0) * Number(v.cantidad));
+  }, 0);
+  const gananciaResto = vendidoResto - costoResto;
 
   return (
     <div>
@@ -200,19 +263,92 @@ function TabResumen({ productos, ventas, compras, gastos }) {
         </div>
       )}
 
-      <div style={{ marginTop: 22, marginBottom: 8, color: "#f0ece0", fontWeight: 700, fontSize: 15 }}>
-        Control de caja (histórico)
+      {/* Ganancia real */}
+      <div style={{ ...styles.card, marginTop: 18 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+          <TrendingUp size={16} color="#7ba15a" />
+          <div style={styles.cardLabel}>Ganancia real (ventas - costo)</div>
+        </div>
+        <div style={styles.smallMuted}>Vendido {money(totalVendidoHistorico)} − Costo {money(totalCostoHistorico)}</div>
+        <div style={{ ...styles.cardValue, color: gananciaReal >= 0 ? "#7ba15a" : "#e08a7d", marginTop: 6 }}>
+          {money(gananciaReal)}
+        </div>
+      </div>
+
+      {/* Ventas YERBA */}
+      <div style={{ marginTop: 22, marginBottom: 8, color: "#f0ece0", fontWeight: 700, fontSize: 15, display: "flex", alignItems: "center", gap: 8 }}>
+        <Leaf size={16} color="#7ba15a" /> Ventas — YERBA
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {MEDIOS.map((m) => {
-          const c = caja[m.id];
+          const c = cajaYerba[m.id];
+          return (
+            <div key={m.id} style={styles.row}>
+              <div style={{ flex: 1 }}>
+                <div style={styles.rowName}>{m.label}</div>
+                <div style={styles.rowMeta}>Vendido {money(c.entra)}</div>
+              </div>
+              <div style={{ fontWeight: 700, color: "#7ba15a" }}>
+                {money(c.entra)}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ ...styles.card, marginTop: 10 }}>
+        <div style={styles.cardLabel}>Ganancia — Yerba</div>
+        <div style={styles.smallMuted}>Vendido {money(vendidoYerba)} − Costo {money(costoYerba)}</div>
+        <div style={{ ...styles.cardValue, color: gananciaYerba >= 0 ? "#7ba15a" : "#e08a7d", marginTop: 6 }}>
+          {money(gananciaYerba)}
+        </div>
+      </div>
+
+      {/* Ventas RESTO */}
+      <div style={{ marginTop: 22, marginBottom: 8, color: "#f0ece0", fontWeight: 700, fontSize: 15, display: "flex", alignItems: "center", gap: 8 }}>
+        <Package size={16} color="#d9924b" /> Ventas — RESTO (Mates, Bombillas, Termos, etc.)
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {MEDIOS.map((m) => {
+          const c = cajaResto[m.id];
+          return (
+            <div key={m.id} style={styles.row}>
+              <div style={{ flex: 1 }}>
+                <div style={styles.rowName}>{m.label}</div>
+                <div style={styles.rowMeta}>Vendido {money(c.entra)}</div>
+              </div>
+              <div style={{ fontWeight: 700, color: "#7ba15a" }}>
+                {money(c.entra)}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ ...styles.card, marginTop: 10 }}>
+        <div style={styles.cardLabel}>Ganancia — Resto</div>
+        <div style={styles.smallMuted}>Vendido {money(vendidoResto)} − Costo {money(costoResto)}</div>
+        <div style={{ ...styles.cardValue, color: gananciaResto >= 0 ? "#7ba15a" : "#e08a7d", marginTop: 6 }}>
+          {money(gananciaResto)}
+        </div>
+      </div>
+
+      {/* Control de caja GENERAL */}
+      <div style={{ marginTop: 22, marginBottom: 8, color: "#f0ece0", fontWeight: 700, fontSize: 15 }}>
+        Control de caja — GENERAL (ventas + compras + gastos)
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {MEDIOS.map((m) => {
+          const c = cajaGeneral[m.id];
           const saldo = c.entra - c.sale;
           return (
             <div key={m.id} style={styles.row}>
               <div style={{ flex: 1 }}>
                 <div style={styles.rowName}>{m.label}</div>
-                <div style={styles.rowMeta}>Vendido {money(c.entra)} · Gastado/comprado {money(c.sale)}</div>
+                <div style={styles.rowMeta}>Entra {money(c.entra)} · Sale {money(c.sale)}</div>
               </div>
               <div style={{ fontWeight: 700, color: saldo >= 0 ? "#7ba15a" : "#e08a7d" }}>
                 {money(saldo)}
@@ -222,22 +358,112 @@ function TabResumen({ productos, ventas, compras, gastos }) {
         })}
       </div>
       <div style={styles.smallMuted}>
-        Esto es lo que el sistema calcula que deberías tener en cada medio, según lo cargado. Comparalo con la plata real para ver si coincide.
-      </div>
-
-      <div style={{ ...styles.card, marginTop: 18 }}>
-        <div style={styles.cardLabel}>Ganancia real (histórico)</div>
-        <div style={styles.smallMuted}>Vendido {money(totalVendidoHistorico)} − Comprado {money(totalCompradoHistorico)} − Gastos {money(totalGastadoHistorico)}</div>
-        <div style={{ ...styles.cardValue, color: gananciaReal >= 0 ? "#7ba15a" : "#e08a7d", marginTop: 6 }}>
-          {money(gananciaReal)}
-        </div>
+        Esto es lo que el sistema calcula que deberías tener en cada medio. Comparalo con la plata real para ver si coincide.
       </div>
     </div>
   );
 }
 
 // ============================================================
-// STOCK
+// REGISTRO DE VENTAS
+// ============================================================
+function TabRegistro({ ventas }) {
+  const [busqueda, setBusqueda] = useState("");
+  const [filtroVendedor, setFiltroVendedor] = useState("todos");
+
+  const vendedores = [...new Set(ventas.map((v) => v.vendedor).filter(Boolean))];
+
+  const filtradas = ventas.filter((v) => {
+    const okBusq = v.producto_nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
+                   v.comprador?.toLowerCase().includes(busqueda.toLowerCase()) ||
+                   v.vendedor?.toLowerCase().includes(busqueda.toLowerCase());
+    const okVendedor = filtroVendedor === "todos" || v.vendedor === filtroVendedor;
+    return okBusq && okVendedor;
+  });
+
+  const formatearFecha = (fecha) => {
+    if (!fecha) return "-";
+    const d = new Date(fecha);
+    return d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "2-digit" });
+  };
+
+  const formatearHora = (created_at) => {
+    if (!created_at) return "-";
+    const d = new Date(created_at);
+    return d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+  };
+
+  return (
+    <div>
+      <div style={styles.searchBox}>
+        <Search size={16} color="#8fa085" />
+        <input
+          placeholder="Buscar por producto, comprador o vendedor..."
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          style={styles.searchInput}
+        />
+      </div>
+
+      {vendedores.length > 1 && (
+        <div style={styles.catScroll}>
+          <button onClick={() => setFiltroVendedor("todos")} style={styles.chip(filtroVendedor === "todos")}>
+            Todos
+          </button>
+          {vendedores.map((v) => (
+            <button key={v} onClick={() => setFiltroVendedor(v)} style={styles.chip(filtroVendedor === v)}>
+              {v}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div style={{ margin: "10px 0 12px", color: "#8fa085", fontSize: 12 }}>
+        {filtradas.length} ventas registradas
+      </div>
+
+      {filtradas.length === 0 ? (
+        <div style={{ color: "#8fa085", textAlign: "center", padding: "40px 0" }}>
+          No hay ventas registradas.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {filtradas.map((v) => (
+            <div key={v.id} style={styles.ventaCard}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div style={{ flex: 1 }}>
+                  <div style={styles.ventaProducto}>{v.producto_nombre}</div>
+                  <div style={styles.ventaMeta}>
+                    {v.cantidad} × {money(v.precio_unitario)} = <b style={{ color: "#d9b968" }}>{money(v.cantidad * v.precio_unitario)}</b>
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={styles.ventaFecha}>{formatearFecha(v.fecha)}</div>
+                  <div style={styles.ventaHora}>{formatearHora(v.created_at)}</div>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 16, marginTop: 8, fontSize: 12, color: "#8fa085" }}>
+                {v.comprador && (
+                  <span>👤 {v.comprador}</span>
+                )}
+                {v.vendedor && (
+                  <span>🏷️ {v.vendedor}</span>
+                )}
+                <span>💳 {v.medio_pago === "efectivo" ? "Efectivo" : v.medio_pago === "transferencia_juli" ? "Transf. Juli" : v.medio_pago === "transferencia_nacho" ? "Transf. Nacho" : v.medio_pago}</span>
+                {v.tipo_venta && (
+                  <span>{v.tipo_venta === "web" ? "🌐 Web" : "👥 Persona"}</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// STOCK — todo junto
 // ============================================================
 function TabStock({ productos, categorias, onRefresh }) {
   const [busqueda, setBusqueda] = useState("");
@@ -392,13 +618,13 @@ function TabStock({ productos, categorias, onRefresh }) {
 // COMPRAR (reponer stock, o cargar un gasto particular)
 // ============================================================
 function TabComprar({ productos, onRefresh }) {
-  const [modo, setModo] = useState("stock"); // 'stock' | 'gasto'
+  const [modo, setModo] = useState("stock"); // 'stock' | 'gasto' | 'gasto_extra'
   const [productoId, setProductoId] = useState("");
   const [cantidad, setCantidad] = useState("");
   const [costoUnitario, setCostoUnitario] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [monto, setMonto] = useState("");
-  const [medioPago, setMedioPago] = useState("efectivo");
+  const [origenFondos, setOrigenFondos] = useState("efectivo");
   const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10));
   const [saving, setSaving] = useState(false);
   const [ok, setOk] = useState("");
@@ -416,7 +642,7 @@ function TabComprar({ productos, onRefresh }) {
 
       await supabase.from("compras").insert({
         producto_id: producto.id, producto_nombre: producto.nombre,
-        cantidad: cant, costo_unitario: costo, medio_pago: medioPago, fecha,
+        cantidad: cant, costo_unitario: costo, medio_pago: origenFondos, fecha,
       });
       await supabase.from("productos").update({
         stock: Number(producto.stock || 0) + cant,
@@ -425,11 +651,18 @@ function TabComprar({ productos, onRefresh }) {
 
       setOk(`Se sumaron ${cant} unidades de "${producto.nombre}" al stock.`);
       setProductoId(""); setCantidad(""); setCostoUnitario("");
-    } else {
+    } else if (modo === "gasto") {
       await supabase.from("gastos").insert({
-        descripcion, monto: Number(monto) || 0, medio_pago: medioPago, fecha,
+        descripcion, monto: Number(monto) || 0, medio_pago: origenFondos, fecha,
       });
       setOk("Gasto registrado.");
+      setDescripcion(""); setMonto("");
+    } else {
+      // Gasto extra
+      await supabase.from("gastos").insert({
+        descripcion: `[Extra] ${descripcion}`, monto: Number(monto) || 0, medio_pago: origenFondos, fecha,
+      });
+      setOk("Gasto extra registrado.");
       setDescripcion(""); setMonto("");
     }
 
@@ -441,7 +674,8 @@ function TabComprar({ productos, onRefresh }) {
     <div>
       <div style={styles.toggleRow}>
         <button onClick={() => setModo("stock")} style={styles.toggleBtn(modo === "stock")}>Compra de stock</button>
-        <button onClick={() => setModo("gasto")} style={styles.toggleBtn(modo === "gasto")}>Gasto particular</button>
+        <button onClick={() => setModo("gasto")} style={styles.toggleBtn(modo === "gasto")}>Gasto</button>
+        <button onClick={() => setModo("gasto_extra")} style={styles.toggleBtn(modo === "gasto_extra")}>Gasto extra</button>
       </div>
 
       <form onSubmit={registrar} style={styles.card}>
@@ -467,19 +701,23 @@ function TabComprar({ productos, onRefresh }) {
         ) : (
           <>
             <label style={styles.label}>Descripción</label>
-            <input required placeholder="Ej: bolsas, envío, insumos..." value={descripcion} onChange={(e) => setDescripcion(e.target.value)} style={styles.input} />
+            <input required placeholder="Ej: envío, bolsas, insumos..." value={descripcion} onChange={(e) => setDescripcion(e.target.value)} style={styles.input} />
             <label style={styles.label}>Monto</label>
             <input type="number" step="0.01" required value={monto} onChange={(e) => setMonto(e.target.value)} style={styles.input} />
           </>
         )}
 
-        <label style={styles.label}>Pagado con</label>
+        <label style={styles.label}>Pagado con / Origen de fondos</label>
         <div style={styles.toggleRow}>
-          {MEDIOS.map((m) => (
-            <button type="button" key={m.id} onClick={() => setMedioPago(m.id)} style={styles.toggleBtn(medioPago === m.id)}>
-              {m.label}
-            </button>
-          ))}
+          <button type="button" onClick={() => setOrigenFondos("efectivo")} style={styles.toggleBtn(origenFondos === "efectivo")}>
+            Efectivo
+          </button>
+          <button type="button" onClick={() => setOrigenFondos("transferencia_juli")} style={styles.toggleBtn(origenFondos === "transferencia_juli")}>
+            Transf. Juli
+          </button>
+          <button type="button" onClick={() => setOrigenFondos("transferencia_nacho")} style={styles.toggleBtn(origenFondos === "transferencia_nacho")}>
+            Transf. Nacho
+          </button>
         </div>
 
         <label style={styles.label}>Fecha</label>
@@ -488,7 +726,7 @@ function TabComprar({ productos, onRefresh }) {
         {ok && <div style={styles.okMsg}>{ok}</div>}
 
         <button type="submit" disabled={saving} style={{ ...styles.saveBtn, marginTop: 16 }}>
-          {saving ? "Guardando..." : modo === "stock" ? "Registrar compra" : "Registrar gasto"}
+          {saving ? "Guardando..." : modo === "stock" ? "Registrar compra" : modo === "gasto" ? "Registrar gasto" : "Registrar gasto extra"}
         </button>
       </form>
     </div>
@@ -498,17 +736,34 @@ function TabComprar({ productos, onRefresh }) {
 // ============================================================
 // VENDER
 // ============================================================
-function TabVender({ productos, onRefresh }) {
+function TabVender({ productos, onRefresh, usuarioActual }) {
   const [productoId, setProductoId] = useState("");
   const [cantidad, setCantidad] = useState("");
   const [comprador, setComprador] = useState("");
-  const [medioPago, setMedioPago] = useState("efectivo");
+  const [efectivoMonto, setEfectivoMonto] = useState("");
+  const [transferenciaMonto, setTransferenciaMonto] = useState("");
+  const [transferenciaDestino, setTransferenciaDestino] = useState("transferencia_juli");
+  const [esMixto, setEsMixto] = useState(false);
   const [tipoVenta, setTipoVenta] = useState("persona"); // 'web' | 'persona'
   const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10));
   const [saving, setSaving] = useState(false);
   const [ok, setOk] = useState("");
+  const [descuentoBombilla, setDescuentoBombilla] = useState(false);
+  const [montoDescuentoBombilla, setMontoDescuentoBombilla] = useState("");
 
   const producto = productos.find((p) => String(p.id) === String(productoId));
+
+  // Verificar si es bombilla
+  const esBombilla = producto?.nombre?.toLowerCase().includes("bombilla");
+
+  const calcularTotal = () => {
+    if (!producto) return 0;
+    let total = Number(producto.precio) * (Number(cantidad) || 0);
+    if (descuentoBombilla && esBombilla) {
+      total -= Number(montoDescuentoBombilla) || 0;
+    }
+    return total;
+  };
 
   const registrar = async (e) => {
     e.preventDefault();
@@ -520,11 +775,26 @@ function TabVender({ productos, onRefresh }) {
     }
     setSaving(true);
 
+    const total = calcularTotal();
+
+    // Determinar medio de pago
+    let medioPago = "efectivo";
+    if (esMixto) {
+      medioPago = "mixto";
+    } else if (efectivoMonto === "" || efectivoMonto === "0") {
+      medioPago = transferenciaDestino;
+    }
+
     await supabase.from("ventas").insert({
       producto_id: producto.id, producto_nombre: producto.nombre,
       cantidad: cant, precio_unitario: producto.precio,
       comprador: comprador || null, medio_pago: medioPago,
+      efectivo_monto: esMixto ? Number(efectivoMonto) || 0 : (medioPago === "efectivo" ? total : 0),
+      transferencia_monto: esMixto ? Number(transferenciaMonto) || 0 : (medioPago !== "efectivo" ? total : 0),
+      transferencia_destino: esMixto ? transferenciaDestino : (medioPago !== "efectivo" ? medioPago : null),
+      descuento_bombilla: descuentoBombilla && esBombilla ? Number(montoDescuentoBombilla) || 0 : 0,
       tipo_venta: tipoVenta, fecha,
+      vendedor: usuarioActual,
     });
     await supabase.from("productos").update({
       stock: Number(producto.stock || 0) - cant,
@@ -532,6 +802,7 @@ function TabVender({ productos, onRefresh }) {
 
     setOk(`Venta registrada: ${cant} × ${producto.nombre}.`);
     setProductoId(""); setCantidad(""); setComprador("");
+    setDescuentoBombilla(false); setMontoDescuentoBombilla("");
     setSaving(false);
     onRefresh();
   };
@@ -544,7 +815,7 @@ function TabVender({ productos, onRefresh }) {
 
       <form onSubmit={registrar}>
         <label style={styles.label}>Producto</label>
-        <select required value={productoId} onChange={(e) => setProductoId(e.target.value)} style={styles.input}>
+        <select required value={productoId} onChange={(e) => { setProductoId(e.target.value); setDescuentoBombilla(false); setMontoDescuentoBombilla(""); }} style={styles.input}>
           <option value="">Elegí un producto...</option>
           {productos.map((p) => (
             <option key={p.id} value={p.id}>{p.nombre} (stock: {p.stock})</option>
@@ -563,17 +834,86 @@ function TabVender({ productos, onRefresh }) {
           <button type="button" onClick={() => setTipoVenta("persona")} style={styles.toggleBtn(tipoVenta === "persona")}>En persona</button>
         </div>
 
+        {/* Descuento bombilla */}
+        {esBombilla && (
+          <div style={{ ...styles.card, marginTop: 10, padding: 12 }}>
+            <label style={{ ...styles.label, display: "flex", alignItems: "center", gap: 8, marginTop: 0 }}>
+              <input type="checkbox" checked={descuentoBombilla} onChange={(e) => setDescuentoBombilla(e.target.checked)} />
+              Aplicar descuento en bombilla
+            </label>
+            {descuentoBombilla && (
+              <div>
+                <label style={styles.label}>Monto de descuento</label>
+                <input type="number" step="0.01" value={montoDescuentoBombilla} onChange={(e) => setMontoDescuentoBombilla(e.target.value)} style={styles.input} placeholder="0" />
+              </div>
+            )}
+          </div>
+        )}
+
         <label style={styles.label}>Cobrado con</label>
         <div style={styles.toggleRow}>
-          {MEDIOS.map((m) => (
-            <button type="button" key={m.id} onClick={() => setMedioPago(m.id)} style={styles.toggleBtn(medioPago === m.id)}>
-              {m.label}
-            </button>
-          ))}
+          <button type="button" onClick={() => { setEsMixto(false); setEfectivoMonto(""); setTransferenciaMonto(""); }} style={styles.toggleBtn(!esMixto && efectivoMonto !== "" && Number(efectivoMonto) >= 0 && efectivoMonto !== "")}>
+            Efectivo
+          </button>
+          <button type="button" onClick={() => { setEsMixto(false); setEfectivoMonto("0"); setTransferenciaMonto(""); }} style={styles.toggleBtn(!esMixto && efectivoMonto === "0")}>
+            Transferencia
+          </button>
+          <button type="button" onClick={() => setEsMixto(true)} style={styles.toggleBtn(esMixto)}>
+            Mixto
+          </button>
         </div>
+
+        {esMixto && (
+          <div style={{ ...styles.card, marginTop: 10, padding: 12 }}>
+            <div style={styles.grid2}>
+              <div>
+                <label style={styles.label}>Monto en efectivo</label>
+                <input type="number" step="0.01" value={efectivoMonto} onChange={(e) => setEfectivoMonto(e.target.value)} style={styles.input} placeholder="0" />
+              </div>
+              <div>
+                <label style={styles.label}>Monto en transferencia</label>
+                <input type="number" step="0.01" value={transferenciaMonto} onChange={(e) => setTransferenciaMonto(e.target.value)} style={styles.input} placeholder="0" />
+              </div>
+            </div>
+            <label style={styles.label}>Destino de transferencia</label>
+            <select value={transferenciaDestino} onChange={(e) => setTransferenciaDestino(e.target.value)} style={styles.input}>
+              <option value="transferencia_juli">Transf. Juli</option>
+              <option value="transferencia_nacho">Transf. Nacho</option>
+            </select>
+          </div>
+        )}
+
+        {!esMixto && efectivoMonto === "0" && (
+          <div>
+            <label style={styles.label}>Destino de transferencia</label>
+            <select value={transferenciaDestino} onChange={(e) => setTransferenciaDestino(e.target.value)} style={styles.input}>
+              <option value="transferencia_juli">Transf. Juli</option>
+              <option value="transferencia_nacho">Transf. Nacho</option>
+            </select>
+          </div>
+        )}
 
         <label style={styles.label}>Fecha</label>
         <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} style={styles.input} />
+
+        {producto && cantidad && (
+          <div style={{ ...styles.card, marginTop: 10, padding: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}>
+              <span style={{ color: "#8fa085" }}>Subtotal</span>
+              <span>{money(Number(producto.precio) * Number(cantidad))}</span>
+            </div>
+            {descuentoBombilla && esBombilla && (
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginTop: 4 }}>
+                <span style={{ color: "#d9924b" }}>Descuento bombilla</span>
+                <span style={{ color: "#d9924b" }}>-{money(Number(montoDescuentoBombilla) || 0)}</span>
+              </div>
+            )}
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16, fontWeight: 700, marginTop: 8, paddingTop: 8, borderTop: "1px solid #33422f" }}>
+              <span>Total</span>
+              <span style={{ color: "#d9b968" }}>{money(calcularTotal())}</span>
+            </div>
+          </div>
+        )}
 
         {ok && <div style={styles.okMsg}>{ok}</div>}
 
@@ -590,7 +930,7 @@ const styles = {
   shell: { maxWidth: 640, margin: "0 auto", padding: "18px 16px 30px" },
   header: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 },
   logoRow: { display: "flex", alignItems: "center", gap: 10 },
-  logoImg: { width: 38, height: 38, borderRadius: 8, objectFit: "cover" },
+  logoImg: { width: 38, height: 38, borderRadius: "50%", objectFit: "cover" },
   logo: { color: "#f0ece0", fontSize: 19, fontWeight: 700, fontFamily: "Georgia, serif" },
   subtitle: { color: "#8fa085", fontSize: 11.5 },
   logoutBtn: {
@@ -681,4 +1021,29 @@ const styles = {
     background: "none", border: "none", cursor: "pointer",
     color: active ? "#d9924b" : "#8fa085",
   }),
+  ventaCard: {
+    background: "#1f2c22",
+    border: "1px solid #33422f",
+    borderRadius: 10,
+    padding: "12px 14px",
+  },
+  ventaProducto: {
+    color: "#f0ece0",
+    fontWeight: 600,
+    fontSize: 14,
+  },
+  ventaMeta: {
+    color: "#8fa085",
+    fontSize: 12,
+    marginTop: 2,
+  },
+  ventaFecha: {
+    color: "#8fa085",
+    fontSize: 12,
+  },
+  ventaHora: {
+    color: "#8fa085",
+    fontSize: 11,
+    marginTop: 2,
+  },
 };

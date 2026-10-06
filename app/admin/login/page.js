@@ -27,7 +27,7 @@ export default function AdminLogin() {
   return (
     <div style={styles.bg}>
       <form onSubmit={handleSubmit} style={styles.card}>
-        <img src="/logo.png" alt="JN Mates" style={{ width: 56, height: 56, borderRadius: 12, objectFit: "cover", margin: "0 auto 10px", display: "block" }} />
+        <img src="/logo.jpeg" alt="JN Mates" style={{ width: 56, height: 56, borderRadius: "50%", objectFit: "cover", margin: "0 auto 10px", display: "block" }} />
         <div style={styles.logo}>JN Mates</div>
         <div style={styles.subtitle}>Panel privado</div>
 
