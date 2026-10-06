@@ -134,23 +134,9 @@ export default function Tienda() {
               <span style={styles.heroHighlight}>experiencias reales</span>
             </h1>
             <p style={styles.heroDesc}>
-              Amor y dedicación en cada producto, para acompañarte en tus mejores momentos.
+              Amor y dedicación en cada producto, para acompañarte en cada momento.
             </p>
           </div>
-        </div>
-
-        {/* Categorías */}
-        <div style={styles.catScroll}>
-          {categorias.map((c) => (
-            <button
-              key={c}
-              className="jn-btn jn-chip"
-              style={styles.chip(cat === c)}
-              onClick={() => setCat(c)}
-            >
-              {c}
-            </button>
-          ))}
         </div>
 
         {/* Grid de productos */}
@@ -292,12 +278,12 @@ const styles = {
     width: 48,
     height: 48,
     borderRadius: "50%",
-    background: "linear-gradient(135deg, #4c8a3f 0%, #7ba15a 100%)",
+    background: "#fff",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     padding: 4,
-    boxShadow: "0 4px 20px rgba(76, 138, 63, 0.3)",
+    boxShadow: "0 2px 12px rgba(0, 0, 0, 0.08)",
   },
   logoImg: {
     width: "100%",
