@@ -64,18 +64,18 @@ export default function Tienda() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
         * { box-sizing: border-box; }
-        .jn-root { font-family: 'Outfit', system-ui, sans-serif; color: #f0ece0; }
+        .jn-root { font-family: 'Outfit', system-ui, sans-serif; color: #2d2a26; }
         .jn-display { font-family: 'Space Grotesk', sans-serif; }
         .jn-btn { border: none; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all .15s ease; }
         .jn-btn:active { transform: scale(0.95); }
         .jn-spin { animation: jn-spin 0.8s linear infinite; }
         @keyframes jn-spin { to { transform: rotate(360deg); } }
         .jn-card { transition: all .2s ease; }
-        .jn-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.3); }
+        .jn-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.15); }
         .jn-chip { transition: all .15s ease; }
         .jn-chip:hover { transform: scale(1.05); }
         .jn-menu-item { transition: all .15s ease; }
-        .jn-menu-item:hover { background: rgba(123, 161, 90, 0.1); }
+        .jn-menu-item:hover { background: rgba(76, 138, 63, 0.1); }
       `}</style>
 
       <div className="jn-root" style={styles.shell}>
@@ -139,11 +139,25 @@ export default function Tienda() {
           </div>
         </div>
 
+        {/* Categorías */}
+        <div style={styles.catScroll}>
+          {categorias.map((c) => (
+            <button
+              key={c}
+              className="jn-btn jn-chip"
+              style={styles.chip(cat === c)}
+              onClick={() => setCat(c)}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+
         {/* Grid de productos */}
         <main style={styles.grid}>
           {loading ? (
             <div style={styles.centerLoading}>
-              <Loader2 size={32} className="jn-spin" color="#a9b8a9" />
+              <Loader2 size={32} className="jn-spin" color="#8fa085" />
             </div>
           ) : filtrados.length === 0 ? (
             <div style={styles.emptyState}>
@@ -265,7 +279,7 @@ export default function Tienda() {
 const styles = {
   appBg: {
     minHeight: "100vh",
-    background: "linear-gradient(180deg, #0d1510 0%, #131c15 50%, #0d1510 100%)",
+    background: "linear-gradient(180deg, #f5f0e8 0%, #ede8dd 50%, #f5f0e8 100%)",
   },
   shell: { maxWidth: 720, margin: "0 auto", padding: "0 20px 60px" },
   header: {
@@ -295,21 +309,19 @@ const styles = {
     fontSize: 22,
     fontWeight: 700,
     letterSpacing: "0.05em",
-    background: "linear-gradient(135deg, #f0ece0 0%, #d9b968 100%)",
-    WebkitBackgroundClip: "text",
-    WebkitTextFillColor: "transparent",
+    color: "#2d2a26",
   },
   tagline: {
     fontSize: 11,
-    color: "#8fa085",
+    color: "#6b6560",
     fontWeight: 400,
     letterSpacing: "0.02em",
   },
   menuBtn: {
-    background: "rgba(31, 44, 34, 0.8)",
+    background: "rgba(255, 255, 255, 0.7)",
     backdropFilter: "blur(10px)",
-    border: "1px solid rgba(51, 66, 47, 0.5)",
-    color: "#f0ece0",
+    border: "1px solid rgba(0, 0, 0, 0.08)",
+    color: "#2d2a26",
     borderRadius: 14,
     padding: 12,
     display: "flex",
@@ -321,14 +333,14 @@ const styles = {
     top: "100%",
     right: 0,
     marginTop: 8,
-    background: "rgba(22, 32, 26, 0.95)",
+    background: "rgba(255, 255, 255, 0.95)",
     backdropFilter: "blur(20px)",
-    border: "1px solid rgba(51, 66, 47, 0.5)",
+    border: "1px solid rgba(0, 0, 0, 0.08)",
     borderRadius: 14,
     padding: 8,
     minWidth: 180,
     zIndex: 100,
-    boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+    boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
   },
   dropdownItem: {
     display: "flex",
@@ -339,7 +351,7 @@ const styles = {
     background: "none",
     border: "none",
     borderRadius: 8,
-    color: "#f0ece0",
+    color: "#2d2a26",
     fontSize: 14,
     fontWeight: 500,
     cursor: "pointer",
@@ -347,10 +359,10 @@ const styles = {
   },
   cartBtn: {
     position: "relative",
-    background: "rgba(31, 44, 34, 0.8)",
+    background: "rgba(255, 255, 255, 0.7)",
     backdropFilter: "blur(10px)",
-    border: "1px solid rgba(51, 66, 47, 0.5)",
-    color: "#f0ece0",
+    border: "1px solid rgba(0, 0, 0, 0.08)",
+    color: "#2d2a26",
     borderRadius: 14,
     padding: 12,
     display: "flex",
@@ -362,7 +374,7 @@ const styles = {
     top: -6,
     right: -6,
     background: "linear-gradient(135deg, #d9924b 0%, #e8a85c 100%)",
-    color: "#16201a",
+    color: "#fff",
     fontSize: 11,
     fontWeight: 700,
     borderRadius: 999,
@@ -375,11 +387,11 @@ const styles = {
     boxShadow: "0 2px 8px rgba(217, 146, 75, 0.4)",
   },
   hero: {
-    background: "linear-gradient(135deg, rgba(76, 138, 63, 0.15) 0%, rgba(123, 161, 90, 0.1) 100%)",
+    background: "linear-gradient(135deg, rgba(76, 138, 63, 0.12) 0%, rgba(123, 161, 90, 0.08) 100%)",
     borderRadius: 20,
     padding: "32px 24px",
     marginBottom: 24,
-    border: "1px solid rgba(123, 161, 90, 0.2)",
+    border: "1px solid rgba(123, 161, 90, 0.25)",
     position: "relative",
     overflow: "hidden",
   },
@@ -391,8 +403,8 @@ const styles = {
     display: "inline-flex",
     alignItems: "center",
     gap: 6,
-    background: "rgba(123, 161, 90, 0.2)",
-    color: "#7ba15a",
+    background: "rgba(123, 161, 90, 0.15)",
+    color: "#4c8a3f",
     fontSize: 11,
     fontWeight: 600,
     padding: "6px 12px",
@@ -406,15 +418,14 @@ const styles = {
     lineHeight: 1.2,
     marginBottom: 12,
     letterSpacing: "-0.02em",
+    color: "#2d2a26",
   },
   heroHighlight: {
-    background: "linear-gradient(135deg, #7ba15a 0%, #a9c48a 100%)",
-    WebkitBackgroundClip: "text",
-    WebkitTextFillColor: "transparent",
+    color: "#4c8a3f",
   },
   heroDesc: {
     fontSize: 14,
-    color: "#8fa085",
+    color: "#6b6560",
     lineHeight: 1.5,
     maxWidth: 400,
   },
@@ -433,9 +444,9 @@ const styles = {
     fontWeight: 600,
     background: active
       ? "linear-gradient(135deg, #4c8a3f 0%, #5a9a4a 100%)"
-      : "rgba(31, 44, 34, 0.6)",
-    color: active ? "#f0ece0" : "#8fa085",
-    border: active ? "1px solid rgba(123, 161, 90, 0.5)" : "1px solid rgba(51, 66, 47, 0.4)",
+      : "rgba(255, 255, 255, 0.6)",
+    color: active ? "#fff" : "#6b6560",
+    border: active ? "1px solid rgba(123, 161, 90, 0.5)" : "1px solid rgba(0, 0, 0, 0.08)",
     backdropFilter: "blur(10px)",
   }),
   grid: {
@@ -456,15 +467,15 @@ const styles = {
     color: "#8fa085",
   },
   card: {
-    background: "rgba(31, 44, 34, 0.5)",
-    border: "1px solid rgba(51, 66, 47, 0.3)",
+    background: "rgba(255, 255, 255, 0.7)",
+    border: "1px solid rgba(0, 0, 0, 0.06)",
     borderRadius: 16,
     overflow: "hidden",
     backdropFilter: "blur(10px)",
   },
   cardImg: {
     aspectRatio: "1",
-    background: "linear-gradient(135deg, #1a251e 0%, #1f2c22 100%)",
+    background: "linear-gradient(135deg, #f0ebe3 0%, #e8e3d9 100%)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -486,14 +497,14 @@ const styles = {
   soldOutOverlay: {
     position: "absolute",
     inset: 0,
-    background: "rgba(13, 21, 16, 0.8)",
+    background: "rgba(245, 240, 232, 0.85)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     backdropFilter: "blur(2px)",
   },
   soldOutText: {
-    color: "#e08a7d",
+    color: "#c0392b",
     fontSize: 12,
     fontWeight: 700,
     letterSpacing: "0.1em",
@@ -504,7 +515,7 @@ const styles = {
   cardName: {
     fontSize: 14,
     fontWeight: 600,
-    color: "#f0ece0",
+    color: "#2d2a26",
     lineHeight: 1.3,
     display: "-webkit-box",
     WebkitLineClamp: 2,
@@ -531,12 +542,12 @@ const styles = {
   cardPrice: {
     fontSize: 18,
     fontWeight: 700,
-    color: "#d9b968",
+    color: "#4c8a3f",
     letterSpacing: "-0.01em",
   },
   addBtn: {
     background: "linear-gradient(135deg, #4c8a3f 0%, #5a9a4a 100%)",
-    color: "#f0ece0",
+    color: "#fff",
     width: 32,
     height: 32,
     borderRadius: 10,
@@ -547,23 +558,21 @@ const styles = {
   },
   soldOutBadge: {
     fontSize: 11,
-    color: "#e08a7d",
+    color: "#c0392b",
     fontWeight: 600,
   },
   footer: {
     marginTop: 60,
     padding: "32px 0",
     textAlign: "center",
-    borderTop: "1px solid rgba(51, 66, 47, 0.3)",
+    borderTop: "1px solid rgba(0, 0, 0, 0.06)",
   },
   footerLogo: {
     fontSize: 16,
     fontWeight: 700,
     letterSpacing: "0.1em",
     marginBottom: 8,
-    background: "linear-gradient(135deg, #f0ece0 0%, #d9b968 100%)",
-    WebkitBackgroundClip: "text",
-    WebkitTextFillColor: "transparent",
+    color: "#2d2a26",
   },
   footerText: {
     fontSize: 12,
@@ -572,7 +581,7 @@ const styles = {
   overlay: {
     position: "fixed",
     inset: 0,
-    background: "rgba(0,0,0,0.6)",
+    background: "rgba(0,0,0,0.4)",
     display: "flex",
     justifyContent: "flex-end",
     zIndex: 50,
@@ -582,8 +591,8 @@ const styles = {
     width: "100%",
     maxWidth: 400,
     height: "100%",
-    background: "linear-gradient(180deg, #16201a 0%, #1a251e 100%)",
-    borderLeft: "1px solid rgba(51, 66, 47, 0.5)",
+    background: "linear-gradient(180deg, #faf8f4 0%, #f5f0e8 100%)",
+    borderLeft: "1px solid rgba(0, 0, 0, 0.08)",
     padding: 20,
     display: "flex",
     flexDirection: "column",
@@ -597,6 +606,7 @@ const styles = {
   drawerTitle: {
     fontSize: 20,
     fontWeight: 700,
+    color: "#2d2a26",
   },
   drawerSubtitle: {
     fontSize: 12,
@@ -604,8 +614,8 @@ const styles = {
     marginTop: 2,
   },
   iconBtn: {
-    background: "rgba(31, 44, 34, 0.6)",
-    color: "#8fa085",
+    background: "rgba(255, 255, 255, 0.6)",
+    color: "#6b6560",
     padding: 8,
     borderRadius: 10,
   },
@@ -628,8 +638,8 @@ const styles = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    background: "rgba(31, 44, 34, 0.5)",
-    border: "1px solid rgba(51, 66, 47, 0.3)",
+    background: "rgba(255, 255, 255, 0.6)",
+    border: "1px solid rgba(0, 0, 0, 0.06)",
     borderRadius: 12,
     padding: "12px 14px",
     gap: 12,
@@ -641,7 +651,7 @@ const styles = {
   cartItemName: {
     fontSize: 14,
     fontWeight: 600,
-    color: "#f0ece0",
+    color: "#2d2a26",
     marginBottom: 2,
   },
   cartItemPrice: {
@@ -658,8 +668,8 @@ const styles = {
     width: 28,
     height: 28,
     borderRadius: 8,
-    background: "rgba(42, 58, 38, 0.8)",
-    color: "#f0ece0",
+    background: "rgba(76, 138, 63, 0.15)",
+    color: "#4c8a3f",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -669,11 +679,12 @@ const styles = {
     textAlign: "center",
     fontWeight: 700,
     fontSize: 14,
+    color: "#2d2a26",
   },
   drawerFooter: {
     marginTop: "auto",
     paddingTop: 16,
-    borderTop: "1px solid rgba(51, 66, 47, 0.3)",
+    borderTop: "1px solid rgba(0, 0, 0, 0.06)",
     display: "flex",
     flexDirection: "column",
     gap: 14,
@@ -690,12 +701,12 @@ const styles = {
   totalValue: {
     fontWeight: 700,
     fontSize: 22,
-    color: "#d9b968",
+    color: "#4c8a3f",
     letterSpacing: "-0.01em",
   },
   checkoutBtn: {
     background: "linear-gradient(135deg, #4c8a3f 0%, #5a9a4a 100%)",
-    color: "#f0ece0",
+    color: "#fff",
     padding: "14px",
     fontSize: 15,
     fontWeight: 600,
