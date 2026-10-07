@@ -117,8 +117,10 @@ export default function AdminPanel() {
             categorias={categorias}
             movimientos={movimientos}
           />
+        ) : tab === "caja" ? (
+          <TabCaja movimientos={movimientos} onRefresh={cargarTodo} />
         ) : tab === "registro" ? (
-          <TabRegistro ventas={ventas} movimientos={movimientos} />
+          <TabRegistro ventas={ventas} movimientos={movimientos} compras={compras} />
         ) : tab === "stock" ? (
           <TabStock productos={productos} categorias={categorias} onRefresh={cargarTodo} />
         ) : tab === "comprar" ? (
@@ -130,6 +132,7 @@ export default function AdminPanel() {
 
       <nav style={styles.navBar}>
         <NavBtn icon={Home} label="Resumen" active={tab === "resumen"} onClick={() => setTab("resumen")} />
+        <NavBtn icon={ArrowRightLeft} label="Caja" active={tab === "caja"} onClick={() => setTab("caja")} />
         <NavBtn icon={ClipboardList} label="Registro" active={tab === "registro"} onClick={() => setTab("registro")} />
         <NavBtn icon={Package} label="Stock" active={tab === "stock"} onClick={() => setTab("stock")} />
         <NavBtn icon={PackagePlus} label="Comprar" active={tab === "comprar"} onClick={() => setTab("comprar")} />
@@ -346,10 +349,10 @@ function TabResumen({ productos, ventas, compras, gastos, categorias }) {
 // ============================================================
 // REGISTRO DE VENTAS
 // ============================================================
-function TabRegistro({ ventas, movimientos }) {
+function TabRegistro({ ventas, movimientos, compras }) {
   const [busqueda, setBusqueda] = useState("");
   const [filtroVendedor, setFiltroVendedor] = useState("todos");
-  const [filtroTipo, setFiltroTipo] = useState("todos"); // 'todos' | 'ventas' | 'movimientos'
+  const [filtroTipo, setFiltroTipo] = useState("todos"); // 'todos' | 'ventas' | 'compras' | 'movimientos'
 
   const vendedores = [...new Set(ventas.map((v) => v.vendedor).filter(Boolean))];
 
@@ -360,6 +363,12 @@ function TabRegistro({ ventas, movimientos }) {
     const okVendedor = filtroVendedor === "todos" || v.vendedor === filtroVendedor;
     const okTipo = filtroTipo === "todos" || filtroTipo === "ventas";
     return okBusq && okVendedor && okTipo;
+  });
+
+  const filtradasCompras = compras.filter((c) => {
+    const okBusq = c.producto_nombre?.toLowerCase().includes(busqueda.toLowerCase());
+    const okTipo = filtroTipo === "todos" || filtroTipo === "compras";
+    return okBusq && okTipo;
   });
 
   const filtradosMovimientos = movimientos.filter((m) => {
@@ -403,6 +412,9 @@ function TabRegistro({ ventas, movimientos }) {
         <button onClick={() => setFiltroTipo("ventas")} style={styles.chip(filtroTipo === "ventas")}>
           Ventas
         </button>
+        <button onClick={() => setFiltroTipo("compras")} style={styles.chip(filtroTipo === "compras")}>
+          Compras
+        </button>
         <button onClick={() => setFiltroTipo("movimientos")} style={styles.chip(filtroTipo === "movimientos")}>
           Movimientos de caja
         </button>
@@ -422,10 +434,10 @@ function TabRegistro({ ventas, movimientos }) {
       )}
 
       <div style={{ margin: "10px 0 12px", color: "#8fa085", fontSize: 12 }}>
-        {filtradas.length} ventas · {filtradosMovimientos.length} movimientos
+        {filtradas.length} ventas · {filtradasCompras.length} compras · {filtradosMovimientos.length} movimientos
       </div>
 
-      {filtradas.length === 0 && filtradosMovimientos.length === 0 ? (
+      {filtradas.length === 0 && filtradasCompras.length === 0 && filtradosMovimientos.length === 0 ? (
         <div style={{ color: "#8fa085", textAlign: "center", padding: "40px 0" }}>
           No hay registros.
         </div>
@@ -456,6 +468,24 @@ function TabRegistro({ ventas, movimientos }) {
                 {v.tipo_venta && (
                   <span>{v.tipo_venta === "web" ? "🌐 Web" : "👥 Persona"}</span>
                 )}
+              </div>
+            </div>
+          ))}
+          {filtradasCompras.map((c) => (
+            <div key={c.id} style={styles.ventaCard}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ ...styles.ventaProducto, color: "#7ba15a" }}>COMPRA</div>
+                  <div style={styles.ventaMeta}>
+                    {c.producto_nombre} · {c.cantidad} × {money(c.costo_unitario)} = <b style={{ color: "#d9b968" }}>{money(c.cantidad * c.costo_unitario)}</b>
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={styles.ventaFecha}>{formatearFecha(c.fecha)}</div>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 16, marginTop: 8, fontSize: 12, color: "#8fa085" }}>
+                <span>💳 {medioLabel(c.medio_pago)}</span>
               </div>
             </div>
           ))}
@@ -937,6 +967,104 @@ function TabVender({ productos, onRefresh, usuarioActual }) {
           {saving ? "Guardando..." : "Registrar venta"}
         </button>
       </form>
+    </div>
+  );
+}
+
+// ============================================================
+// CAJA — Movimientos entre medios de pago
+// ============================================================
+function TabCaja({ movimientos, onRefresh }) {
+  const [desde, setDesde] = useState("efectivo");
+  const [hacia, setHacia] = useState("transferencia_juli");
+  const [monto, setMonto] = useState("");
+  const [motivo, setMotivo] = useState("");
+  const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10));
+  const [saving, setSaving] = useState(false);
+  const [ok, setOk] = useState("");
+
+  const registrar = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setOk("");
+
+    await supabase.from("movimientos_caja").insert({
+      desde, hacia, monto: Number(monto) || 0, motivo, fecha,
+    });
+
+    setOk("Movimiento registrado.");
+    setMonto(""); setMotivo("");
+    setSaving(false);
+    onRefresh();
+  };
+
+  const formatearFecha = (fecha) => {
+    if (!fecha) return "-";
+    const d = new Date(fecha);
+    return d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "2-digit" });
+  };
+
+  return (
+    <div>
+      <div style={styles.card}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#f0ece0", fontWeight: 700, fontSize: 15, marginBottom: 10 }}>
+          <ArrowRightLeft size={17} color="#d9924b" /> Registrar movimiento de caja
+        </div>
+
+        <form onSubmit={registrar}>
+          <label style={styles.label}>Desde</label>
+          <select value={desde} onChange={(e) => setDesde(e.target.value)} style={styles.input}>
+            {MEDIOS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+          </select>
+
+          <label style={styles.label}>Hacia</label>
+          <select value={hacia} onChange={(e) => setHacia(e.target.value)} style={styles.input}>
+            {MEDIOS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+          </select>
+
+          <label style={styles.label}>Monto</label>
+          <input type="number" step="0.01" required value={monto} onChange={(e) => setMonto(e.target.value)} style={styles.input} />
+
+          <label style={styles.label}>Motivo (opcional)</label>
+          <input placeholder="Ej: pasé efectivo a la cuenta de Juli" value={motivo} onChange={(e) => setMotivo(e.target.value)} style={styles.input} />
+
+          <label style={styles.label}>Fecha</label>
+          <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} style={styles.input} />
+
+          {ok && <div style={styles.okMsg}>{ok}</div>}
+
+          <button type="submit" disabled={saving} style={{ ...styles.saveBtn, marginTop: 16 }}>
+            {saving ? "Guardando..." : "Registrar movimiento"}
+          </button>
+        </form>
+      </div>
+
+      {movimientos.length > 0 && (
+        <div style={{ marginTop: 20 }}>
+          <div style={{ color: "#f0ece0", fontWeight: 700, fontSize: 15, marginBottom: 10 }}>
+            Movimientos registrados
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {movimientos.map((m) => (
+              <div key={m.id} style={styles.row}>
+                <div style={{ flex: 1 }}>
+                  <div style={styles.rowName}>
+                    {m.desde === "efectivo" ? "Efectivo" : m.desde === "transferencia_juli" ? "Transf. Juli" : "Transf. Nacho"}
+                    {" → "}
+                    {m.hacia === "efectivo" ? "Efectivo" : m.hacia === "transferencia_juli" ? "Transf. Juli" : "Transf. Nacho"}
+                  </div>
+                  <div style={styles.rowMeta}>
+                    {formatearFecha(m.fecha)}{m.motivo ? ` · ${m.motivo}` : ""}
+                  </div>
+                </div>
+                <div style={{ fontWeight: 700, color: "#d9b968" }}>
+                  {money(m.monto)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
