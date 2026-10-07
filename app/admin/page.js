@@ -527,6 +527,10 @@ function TabStock({ productos, categorias, onRefresh }) {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState("");
+  const [imgZoom, setImgZoom] = useState(1);
+  const [imgPos, setImgPos] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
   const nombresCat = ["Todas", ...categorias.map((c) => c.nombre)];
 
@@ -679,15 +683,34 @@ function TabStock({ productos, categorias, onRefresh }) {
             <label style={styles.label}>Imagen del producto</label>
             <div style={styles.imageUploadContainer}>
               {preview && (
-                <div style={styles.imagePreview}>
-                  <img src={preview} alt="Preview" style={styles.previewImg} />
-                  <button
-                    type="button"
-                    onClick={() => { setPreview(""); setForm({ ...form, imagen_url: "" }); }}
-                    style={styles.removeImgBtn}
+                <div>
+                  <div
+                    style={styles.imageEditorPreview}
+                    onMouseDown={(e) => { setIsDragging(true); setDragStart({ x: e.clientX - imgPos.x, y: e.clientY - imgPos.y }); }}
+                    onMouseMove={(e) => { if (isDragging) setImgPos({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y }); }}
+                    onMouseUp={() => setIsDragging(false)}
+                    onMouseLeave={() => setIsDragging(false)}
+                    onTouchStart={(e) => { setIsDragging(true); setDragStart({ x: e.touches[0].clientX - imgPos.x, y: e.touches[0].clientY - imgPos.y }); }}
+                    onTouchMove={(e) => { if (isDragging) setImgPos({ x: e.touches[0].clientX - dragStart.x, y: e.touches[0].clientY - dragStart.y }); }}
+                    onTouchEnd={() => setIsDragging(false)}
                   >
-                    ✕
-                  </button>
+                    <img
+                      src={preview}
+                      alt="Preview"
+                      style={{
+                        ...styles.previewImg,
+                        transform: `scale(${imgZoom}) translate(${imgPos.x / imgZoom}px, ${imgPos.y / imgZoom}px)`,
+                        cursor: isDragging ? "grabbing" : "grab",
+                      }}
+                    />
+                  </div>
+                  <div style={styles.imageControls}>
+                    <button type="button" onClick={() => setImgZoom(Math.max(0.5, imgZoom - 0.1))} style={styles.controlBtn}>−</button>
+                    <span style={styles.controlLabel}>{Math.round(imgZoom * 100)}%</span>
+                    <button type="button" onClick={() => setImgZoom(Math.min(3, imgZoom + 0.1))} style={styles.controlBtn}>+</button>
+                    <button type="button" onClick={() => { setImgZoom(1); setImgPos({ x: 0, y: 0 }); }} style={styles.controlBtn}>Centrar</button>
+                    <button type="button" onClick={() => { setPreview(""); setForm({ ...form, imagen_url: "" }); setImgZoom(1); setImgPos({ x: 0, y: 0 }); }} style={styles.removeImgBtn}>✕</button>
+                  </div>
                 </div>
               )}
               <label style={styles.uploadBtn}>
@@ -1187,6 +1210,43 @@ const styles = {
   },
   imageUploadContainer: {
     marginTop: 4,
+  },
+  imageEditorPreview: {
+    position: "relative",
+    width: 120,
+    height: 120,
+    marginBottom: 10,
+    borderRadius: 10,
+    overflow: "hidden",
+    border: "1px solid #33422f",
+    background: "#16201a",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    touchAction: "none",
+  },
+  imageControls: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 10,
+  },
+  controlBtn: {
+    background: "#1f2c22",
+    color: "#f0ece0",
+    border: "1px solid #33422f",
+    borderRadius: 6,
+    padding: "6px 10px",
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: "pointer",
+  },
+  controlLabel: {
+    color: "#8fa085",
+    fontSize: 12,
+    fontWeight: 600,
+    minWidth: 40,
+    textAlign: "center",
   },
   imagePreview: {
     position: "relative",
