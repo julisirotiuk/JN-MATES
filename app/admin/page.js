@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   Pencil, Trash2, Plus, LogOut, Loader2, Search,
-  Home, Package, PackagePlus, ShoppingCart, AlertTriangle, Leaf, TrendingUp, ClipboardList,
+  Home, Package, PackagePlus, ShoppingCart, AlertTriangle, Leaf, TrendingUp, ClipboardList, ArrowRightLeft,
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -38,6 +38,7 @@ export default function AdminPanel() {
   const [ventas, setVentas] = useState([]);
   const [compras, setCompras] = useState([]);
   const [gastos, setGastos] = useState([]);
+  const [movimientos, setMovimientos] = useState([]);
 
   // ----- Gate de sesión -----
   useEffect(() => {
@@ -54,18 +55,20 @@ export default function AdminPanel() {
 
   const cargarTodo = async () => {
     setLoading(true);
-    const [{ data: prods }, { data: cats }, { data: v }, { data: c }, { data: g }] = await Promise.all([
+    const [{ data: prods }, { data: cats }, { data: v }, { data: c }, { data: g }, { data: m }] = await Promise.all([
       supabase.from("productos").select("*").order("nombre", { ascending: true }),
       supabase.from("categorias").select("*").order("nombre", { ascending: true }),
       supabase.from("ventas").select("*").order("fecha", { ascending: false }).order("created_at", { ascending: false }).limit(200),
       supabase.from("compras").select("*").order("fecha", { ascending: false }).limit(200),
       supabase.from("gastos").select("*").order("fecha", { ascending: false }).limit(200),
+      supabase.from("movimientos_caja").select("*").order("fecha", { ascending: false }).limit(200),
     ]);
     setProductos(prods || []);
     setCategorias(cats || []);
     setVentas(v || []);
     setCompras(c || []);
     setGastos(g || []);
+    setMovimientos(m || []);
     setLoading(false);
   };
 
@@ -112,7 +115,10 @@ export default function AdminPanel() {
             compras={compras}
             gastos={gastos}
             categorias={categorias}
+            movimientos={movimientos}
           />
+        ) : tab === "caja" ? (
+          <TabCaja movimientos={movimientos} onRefresh={cargarTodo} />
         ) : tab === "registro" ? (
           <TabRegistro ventas={ventas} />
         ) : tab === "stock" ? (
@@ -126,6 +132,7 @@ export default function AdminPanel() {
 
       <nav style={styles.navBar}>
         <NavBtn icon={Home} label="Resumen" active={tab === "resumen"} onClick={() => setTab("resumen")} />
+        <NavBtn icon={ArrowRightLeft} label="Caja" active={tab === "caja"} onClick={() => setTab("caja")} />
         <NavBtn icon={ClipboardList} label="Registro" active={tab === "registro"} onClick={() => setTab("registro")} />
         <NavBtn icon={Package} label="Stock" active={tab === "stock"} onClick={() => setTab("stock")} />
         <NavBtn icon={PackagePlus} label="Comprar" active={tab === "comprar"} onClick={() => setTab("comprar")} />
@@ -888,6 +895,104 @@ function TabVender({ productos, onRefresh, usuarioActual }) {
           {saving ? "Guardando..." : "Registrar venta"}
         </button>
       </form>
+    </div>
+  );
+}
+
+// ============================================================
+// CAJA — Movimientos entre medios de pago
+// ============================================================
+function TabCaja({ movimientos, onRefresh }) {
+  const [desde, setDesde] = useState("efectivo");
+  const [hacia, setHacia] = useState("transferencia_juli");
+  const [monto, setMonto] = useState("");
+  const [motivo, setMotivo] = useState("");
+  const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10));
+  const [saving, setSaving] = useState(false);
+  const [ok, setOk] = useState("");
+
+  const registrar = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setOk("");
+
+    await supabase.from("movimientos_caja").insert({
+      desde, hacia, monto: Number(monto) || 0, motivo, fecha,
+    });
+
+    setOk("Movimiento registrado.");
+    setMonto(""); setMotivo("");
+    setSaving(false);
+    onRefresh();
+  };
+
+  const formatearFecha = (fecha) => {
+    if (!fecha) return "-";
+    const d = new Date(fecha);
+    return d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "2-digit" });
+  };
+
+  return (
+    <div>
+      <div style={styles.card}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#f0ece0", fontWeight: 700, fontSize: 15, marginBottom: 10 }}>
+          <ArrowRightLeft size={17} color="#d9924b" /> Registrar movimiento de caja
+        </div>
+
+        <form onSubmit={registrar}>
+          <label style={styles.label}>Desde</label>
+          <select value={desde} onChange={(e) => setDesde(e.target.value)} style={styles.input}>
+            {MEDIOS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+          </select>
+
+          <label style={styles.label}>Hacia</label>
+          <select value={hacia} onChange={(e) => setHacia(e.target.value)} style={styles.input}>
+            {MEDIOS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+          </select>
+
+          <label style={styles.label}>Monto</label>
+          <input type="number" step="0.01" required value={monto} onChange={(e) => setMonto(e.target.value)} style={styles.input} />
+
+          <label style={styles.label}>Motivo (opcional)</label>
+          <input placeholder="Ej: pasé efectivo a la cuenta de Juli" value={motivo} onChange={(e) => setMotivo(e.target.value)} style={styles.input} />
+
+          <label style={styles.label}>Fecha</label>
+          <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} style={styles.input} />
+
+          {ok && <div style={styles.okMsg}>{ok}</div>}
+
+          <button type="submit" disabled={saving} style={{ ...styles.saveBtn, marginTop: 16 }}>
+            {saving ? "Guardando..." : "Registrar movimiento"}
+          </button>
+        </form>
+      </div>
+
+      {movimientos.length > 0 && (
+        <div style={{ marginTop: 20 }}>
+          <div style={{ color: "#f0ece0", fontWeight: 700, fontSize: 15, marginBottom: 10 }}>
+            Movimientos registrados
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {movimientos.map((m) => (
+              <div key={m.id} style={styles.row}>
+                <div style={{ flex: 1 }}>
+                  <div style={styles.rowName}>
+                    {m.desde === "efectivo" ? "Efectivo" : m.desde === "transferencia_juli" ? "Transf. Juli" : "Transf. Nacho"}
+                    {" → "}
+                    {m.hacia === "efectivo" ? "Efectivo" : m.hacia === "transferencia_juli" ? "Transf. Juli" : "Transf. Nacho"}
+                  </div>
+                  <div style={styles.rowMeta}>
+                    {formatearFecha(m.fecha)}{m.motivo ? ` · ${m.motivo}` : ""}
+                  </div>
+                </div>
+                <div style={{ fontWeight: 700, color: "#d9b968" }}>
+                  {money(m.monto)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
