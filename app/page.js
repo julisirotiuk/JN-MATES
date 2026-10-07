@@ -27,7 +27,7 @@ function WhatsAppButton({ producto }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const mensaje = `Hola! Necesito atención personalizada sobre este producto: ${producto.nombre}`;
+  const mensaje = `Hola! Necesito atención personalizada sobre este producto: ${producto.nombre}\n\n${producto.imagen_url || ""}`;
   const mensajeGenerico = `Hola! Necesito realizar una consulta acerca de este producto\n\n${producto.imagen_url || ""}`;
 
   return (
