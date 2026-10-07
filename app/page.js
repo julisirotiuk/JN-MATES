@@ -254,7 +254,7 @@ export default function Tienda() {
                       alt={p.nombre}
                       style={{
                         ...styles.img,
-                        objectFit: "contain",
+                        objectFit: "cover",
                         transform: `scale(${p.imagen_zoom || 1}) translate(${(p.imagen_pos_x || 0) / (p.imagen_zoom || 1)}px, ${(p.imagen_pos_y || 0) / (p.imagen_zoom || 1)}px)`,
                       }}
                     />
@@ -551,12 +551,13 @@ const styles = {
     backdropFilter: "blur(10px)",
   },
   cardImg: {
-    aspectRatio: "1",
+    aspectRatio: "3/4",
     background: "linear-gradient(135deg, #f0ebe3 0%, #e8e3d9 100%)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
+    overflow: "hidden",
   },
   img: {
     width: "100%",

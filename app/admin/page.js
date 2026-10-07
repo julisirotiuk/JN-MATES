@@ -1220,7 +1220,7 @@ const styles = {
   imageEditorPreview: {
     position: "relative",
     width: 120,
-    height: 120,
+    height: 160,
     marginBottom: 10,
     borderRadius: 10,
     overflow: "hidden",
