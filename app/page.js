@@ -78,9 +78,14 @@ export default function Tienda() {
         .jn-menu-item:hover { background: rgba(76, 138, 63, 0.1); }
         .jn-hero-anim { animation: jn-hero-fade 0.8s ease-out both; }
         .jn-hero-anim-delay { animation: jn-hero-fade 0.8s ease-out 0.2s both; }
+        .jn-product-anim { animation: jn-product-fade 0.5s ease-out both; }
         @keyframes jn-hero-fade {
           from { opacity: 0; transform: translateY(20px); }
           to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes jn-product-fade {
+          from { opacity: 0; transform: translateY(30px) scale(0.95); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
         }
       `}</style>
 
@@ -156,8 +161,8 @@ export default function Tienda() {
               <div style={{ fontSize: 13, color: "#8fa085" }}>En esta categoría por ahora</div>
             </div>
           ) : (
-            filtrados.map((p) => (
-              <div key={p.id} className="jn-card" style={styles.card}>
+            filtrados.map((p, index) => (
+              <div key={p.id} className="jn-card jn-product-anim" style={{ ...styles.card, animationDelay: `${Math.min(index * 0.08, 0.6)}s` }}>
                 <div style={styles.cardImg}>
                   {p.imagen_url ? (
                     <img src={p.imagen_url} alt={p.nombre} style={styles.img} />
