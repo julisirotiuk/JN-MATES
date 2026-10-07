@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 
 export default function AdminLogin() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -41,13 +43,22 @@ export default function AdminLogin() {
         />
 
         <label style={styles.label}>Contraseña</label>
-        <input
-          type="password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          style={styles.input}
-        />
+        <div style={styles.passwordContainer}>
+          <input
+            type={showPassword ? "text" : "password"}
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            style={styles.passwordInput}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            style={styles.eyeBtn}
+          >
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
 
         {error && <div style={styles.error}>{error}</div>}
 
@@ -90,6 +101,33 @@ const styles = {
     color: "#f0ece0",
     fontSize: 14,
     outline: "none",
+  },
+  passwordContainer: {
+    position: "relative",
+    display: "flex",
+    alignItems: "center",
+  },
+  passwordInput: {
+    background: "#16201a",
+    border: "1px solid #33422f",
+    borderRadius: 8,
+    padding: "10px 40px 10px 12px",
+    color: "#f0ece0",
+    fontSize: 14,
+    outline: "none",
+    width: "100%",
+  },
+  eyeBtn: {
+    position: "absolute",
+    right: 8,
+    background: "none",
+    border: "none",
+    color: "#8fa085",
+    cursor: "pointer",
+    padding: 4,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
   error: { color: "#e08a7d", fontSize: 12.5, marginTop: 10 },
   btn: {
