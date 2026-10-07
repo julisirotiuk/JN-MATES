@@ -27,14 +27,8 @@ function WhatsAppButton({ producto }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const mensaje = `Hola! Me interesa este producto: ${producto.nombre}\n\n${producto.imagen_url || ""}`;
-  const mensajeGenerico = "Hola! Tengo una consulta sobre sus productos.";
-
-  const handleWhatsAppClick = (e, number) => {
-    e.preventDefault();
-    const url = `https://wa.me/${number}?text=${encodeURIComponent(mensaje)}`;
-    window.open(url, "_blank");
-  };
+  const mensaje = `Hola! Necesito atención personalizada sobre este producto: ${producto.nombre}`;
+  const mensajeGenerico = `Hola! Necesito realizar una consulta acerca de este producto\n\n${producto.imagen_url || ""}`;
 
   return (
     <div ref={btnRef} style={{ position: "relative" }}>
@@ -674,11 +668,12 @@ const styles = {
     padding: "12px 14px",
     borderRadius: 10,
     color: "#2d2a26",
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 500,
     textDecoration: "none",
     transition: "background .15s ease",
     cursor: "pointer",
+    minWidth: 0,
   },
   contactAvatar: {
     width: 32,
