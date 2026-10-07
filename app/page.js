@@ -27,8 +27,14 @@ function WhatsAppButton({ producto }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const mensaje = `Hola! Me interesa este producto: ${producto.nombre}`;
+  const mensaje = `Hola! Me interesa este producto: ${producto.nombre}\n\n${producto.imagen_url || ""}`;
   const mensajeGenerico = "Hola! Tengo una consulta sobre sus productos.";
+
+  const handleWhatsAppClick = (e, number) => {
+    e.preventDefault();
+    const url = `https://wa.me/${number}?text=${encodeURIComponent(mensaje)}`;
+    window.open(url, "_blank");
+  };
 
   return (
     <div ref={btnRef} style={{ position: "relative" }}>
@@ -56,7 +62,7 @@ function WhatsAppButton({ producto }) {
             target="_blank"
             rel="noopener noreferrer"
             style={styles.whatsappMenuItem}
-            onClick={() => setOpen(false)}
+            onClick={(e) => { e.preventDefault(); setOpen(false); window.open(`https://wa.me/5492625669387?text=${encodeURIComponent(mensajeGenerico)}`, "_blank"); }}
           >
             <div style={styles.contactAvatar}>?</div>
             <span style={{ flex: 1 }}>Otra consulta...</span>
@@ -78,7 +84,7 @@ function WhatsAppButton({ producto }) {
               target="_blank"
               rel="noopener noreferrer"
               style={styles.whatsappMenuItem}
-              onClick={() => setOpen(false)}
+              onClick={(e) => { e.preventDefault(); setOpen(false); window.open(`https://wa.me/${c.number}?text=${encodeURIComponent(mensaje)}`, "_blank"); }}
             >
               <div style={styles.contactAvatar}>{c.label[0]}</div>
               <span style={{ flex: 1 }}>{c.label}</span>
@@ -646,6 +652,7 @@ const styles = {
     transition: "all .2s ease",
     width: "100%",
     boxShadow: "0 4px 16px rgba(37, 211, 102, 0.3)",
+    boxSizing: "border-box",
   },
   whatsappMenu: {
     position: "absolute",
