@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import { ShoppingBag, Plus, Minus, X, Loader2, Sparkles, MoreVertical, Home } from "lucide-react";
+import { ShoppingBag, Plus, Minus, X, Loader2, Sparkles, MoreVertical, Home, MessageCircle } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { useCart } from "@/lib/CartContext";
 import Link from "next/link";
@@ -196,6 +196,15 @@ export default function Tienda() {
                       <span style={styles.soldOutBadge}>Sin stock</span>
                     )}
                   </div>
+                  <a
+                    href={`https://wa.me/5491123456789?text=${encodeURIComponent(`Hola! Me interesa este producto: ${p.nombre}${p.imagen_url ? `\n${p.imagen_url}` : ""}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={styles.whatsappBtn}
+                  >
+                    <MessageCircle size={14} />
+                    <span>Necesito atención personalizada</span>
+                  </a>
                 </div>
               </div>
             ))
@@ -544,6 +553,22 @@ const styles = {
     fontSize: 11,
     color: "#c0392b",
     fontWeight: 600,
+  },
+  whatsappBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 10,
+    padding: "8px 12px",
+    background: "rgba(37, 211, 102, 0.1)",
+    border: "1px solid rgba(37, 211, 102, 0.3)",
+    borderRadius: 8,
+    color: "#25d366",
+    fontSize: 12,
+    fontWeight: 600,
+    textDecoration: "none",
+    cursor: "pointer",
+    transition: "all .15s ease",
   },
   footer: {
     marginTop: 60,
