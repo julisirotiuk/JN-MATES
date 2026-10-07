@@ -542,14 +542,17 @@ function TabStock({ productos, categorias, onRefresh }) {
 
   const unidadesTotal = filtrados.reduce((s, p) => s + Number(p.stock || 0), 0);
 
-  const abrirNuevo = () => { setForm(emptyProducto); setPreview(""); setShowForm(true); };
+  const abrirNuevo = () => { setForm(emptyProducto); setPreview(""); setImgZoom(1); setImgPos({ x: 0, y: 0 }); setShowForm(true); };
   const abrirEditar = (p) => {
     setForm({
       id: p.id, nombre: p.nombre || "", categoria_id: p.categoria_id || "",
       precio: p.precio ?? "", costo: p.costo ?? "", stock: p.stock ?? "",
       material: p.material || "", imagen_url: p.imagen_url || "", activo: p.activo,
+      imagen_zoom: p.imagen_zoom ?? 1, imagen_pos_x: p.imagen_pos_x ?? 0, imagen_pos_y: p.imagen_pos_y ?? 0,
     });
     setPreview(p.imagen_url || "");
+    setImgZoom(p.imagen_zoom ?? 1);
+    setImgPos({ x: p.imagen_pos_x ?? 0, y: p.imagen_pos_y ?? 0 });
     setShowForm(true);
   };
 
@@ -585,6 +588,7 @@ function TabStock({ productos, categorias, onRefresh }) {
       precio: Number(form.precio) || 0, costo: Number(form.costo) || 0,
       stock: Number(form.stock) || 0, material: form.material,
       imagen_url: form.imagen_url, activo: form.activo,
+      imagen_zoom: imgZoom, imagen_pos_x: imgPos.x, imagen_pos_y: imgPos.y,
     };
     if (form.id) await supabase.from("productos").update(payload).eq("id", form.id);
     else await supabase.from("productos").insert(payload);
@@ -698,7 +702,9 @@ function TabStock({ productos, categorias, onRefresh }) {
                       src={preview}
                       alt="Preview"
                       style={{
-                        ...styles.previewImg,
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "contain",
                         transform: `scale(${imgZoom}) translate(${imgPos.x / imgZoom}px, ${imgPos.y / imgZoom}px)`,
                         cursor: isDragging ? "grabbing" : "grab",
                       }}

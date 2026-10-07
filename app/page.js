@@ -249,7 +249,15 @@ export default function Tienda() {
               <div key={p.id} className="jn-card jn-product-anim" style={{ ...styles.card, animationDelay: `${Math.min(index * 0.08, 0.6)}s` }}>
                 <div style={styles.cardImg}>
                   {p.imagen_url ? (
-                    <img src={p.imagen_url} alt={p.nombre} style={styles.img} />
+                    <img
+                      src={p.imagen_url}
+                      alt={p.nombre}
+                      style={{
+                        ...styles.img,
+                        objectFit: "contain",
+                        transform: `scale(${p.imagen_zoom || 1}) translate(${(p.imagen_pos_x || 0) / (p.imagen_zoom || 1)}px, ${(p.imagen_pos_y || 0) / (p.imagen_zoom || 1)}px)`,
+                      }}
+                    />
                   ) : (
                     <div style={styles.imgPlaceholder}>
                       <span style={{ fontSize: 40 }}>🧉</span>
