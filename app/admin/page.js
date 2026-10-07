@@ -117,10 +117,8 @@ export default function AdminPanel() {
             categorias={categorias}
             movimientos={movimientos}
           />
-        ) : tab === "caja" ? (
-          <TabCaja movimientos={movimientos} onRefresh={cargarTodo} />
         ) : tab === "registro" ? (
-          <TabRegistro ventas={ventas} />
+          <TabRegistro ventas={ventas} movimientos={movimientos} />
         ) : tab === "stock" ? (
           <TabStock productos={productos} categorias={categorias} onRefresh={cargarTodo} />
         ) : tab === "comprar" ? (
@@ -132,7 +130,6 @@ export default function AdminPanel() {
 
       <nav style={styles.navBar}>
         <NavBtn icon={Home} label="Resumen" active={tab === "resumen"} onClick={() => setTab("resumen")} />
-        <NavBtn icon={ArrowRightLeft} label="Caja" active={tab === "caja"} onClick={() => setTab("caja")} />
         <NavBtn icon={ClipboardList} label="Registro" active={tab === "registro"} onClick={() => setTab("registro")} />
         <NavBtn icon={Package} label="Stock" active={tab === "stock"} onClick={() => setTab("stock")} />
         <NavBtn icon={PackagePlus} label="Comprar" active={tab === "comprar"} onClick={() => setTab("comprar")} />
@@ -349,9 +346,10 @@ function TabResumen({ productos, ventas, compras, gastos, categorias }) {
 // ============================================================
 // REGISTRO DE VENTAS
 // ============================================================
-function TabRegistro({ ventas }) {
+function TabRegistro({ ventas, movimientos }) {
   const [busqueda, setBusqueda] = useState("");
   const [filtroVendedor, setFiltroVendedor] = useState("todos");
+  const [filtroTipo, setFiltroTipo] = useState("todos"); // 'todos' | 'ventas' | 'movimientos'
 
   const vendedores = [...new Set(ventas.map((v) => v.vendedor).filter(Boolean))];
 
@@ -360,7 +358,16 @@ function TabRegistro({ ventas }) {
                    v.comprador?.toLowerCase().includes(busqueda.toLowerCase()) ||
                    v.vendedor?.toLowerCase().includes(busqueda.toLowerCase());
     const okVendedor = filtroVendedor === "todos" || v.vendedor === filtroVendedor;
-    return okBusq && okVendedor;
+    const okTipo = filtroTipo === "todos" || filtroTipo === "ventas";
+    return okBusq && okVendedor && okTipo;
+  });
+
+  const filtradosMovimientos = movimientos.filter((m) => {
+    const okBusq = m.motivo?.toLowerCase().includes(busqueda.toLowerCase()) ||
+                   m.desde?.toLowerCase().includes(busqueda.toLowerCase()) ||
+                   m.hacia?.toLowerCase().includes(busqueda.toLowerCase());
+    const okTipo = filtroTipo === "todos" || filtroTipo === "movimientos";
+    return okBusq && okTipo;
   });
 
   const formatearFecha = (fecha) => {
@@ -375,6 +382,8 @@ function TabRegistro({ ventas }) {
     return d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
   };
 
+  const medioLabel = (id) => id === "efectivo" ? "Efectivo" : id === "transferencia_juli" ? "Transf. Juli" : id === "transferencia_nacho" ? "Transf. Nacho" : id;
+
   return (
     <div>
       <div style={styles.searchBox}>
@@ -385,6 +394,18 @@ function TabRegistro({ ventas }) {
           onChange={(e) => setBusqueda(e.target.value)}
           style={styles.searchInput}
         />
+      </div>
+
+      <div style={styles.catScroll}>
+        <button onClick={() => setFiltroTipo("todos")} style={styles.chip(filtroTipo === "todos")}>
+          Todos
+        </button>
+        <button onClick={() => setFiltroTipo("ventas")} style={styles.chip(filtroTipo === "ventas")}>
+          Ventas
+        </button>
+        <button onClick={() => setFiltroTipo("movimientos")} style={styles.chip(filtroTipo === "movimientos")}>
+          Movimientos de caja
+        </button>
       </div>
 
       {vendedores.length > 1 && (
@@ -401,12 +422,12 @@ function TabRegistro({ ventas }) {
       )}
 
       <div style={{ margin: "10px 0 12px", color: "#8fa085", fontSize: 12 }}>
-        {filtradas.length} ventas registradas
+        {filtradas.length} ventas · {filtradosMovimientos.length} movimientos
       </div>
 
-      {filtradas.length === 0 ? (
+      {filtradas.length === 0 && filtradosMovimientos.length === 0 ? (
         <div style={{ color: "#8fa085", textAlign: "center", padding: "40px 0" }}>
-          No hay ventas registradas.
+          No hay registros.
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -431,9 +452,30 @@ function TabRegistro({ ventas }) {
                 {v.vendedor && (
                   <span>🏷️ {v.vendedor}</span>
                 )}
-                <span>💳 {v.medio_pago === "efectivo" ? "Efectivo" : v.medio_pago === "transferencia_juli" ? "Transf. Juli" : v.medio_pago === "transferencia_nacho" ? "Transf. Nacho" : v.medio_pago}</span>
+                <span>💳 {medioLabel(v.medio_pago)}</span>
                 {v.tipo_venta && (
                   <span>{v.tipo_venta === "web" ? "🌐 Web" : "👥 Persona"}</span>
+                )}
+              </div>
+            </div>
+          ))}
+          {filtradosMovimientos.map((m) => (
+            <div key={m.id} style={styles.ventaCard}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ ...styles.ventaProducto, color: "#d9924b" }}>MOVIMIENTO DE CAJA</div>
+                  <div style={styles.ventaMeta}>
+                    {medioLabel(m.desde)} → {medioLabel(m.hacia)}
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={styles.ventaFecha}>{formatearFecha(m.fecha)}</div>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 16, marginTop: 8, fontSize: 12, color: "#8fa085" }}>
+                <span>💰 {money(m.monto)}</span>
+                {m.motivo && (
+                  <span>📝 {m.motivo}</span>
                 )}
               </div>
             </div>
