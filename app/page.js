@@ -76,6 +76,12 @@ export default function Tienda() {
         .jn-chip:hover { transform: scale(1.05); }
         .jn-menu-item { transition: all .15s ease; }
         .jn-menu-item:hover { background: rgba(76, 138, 63, 0.1); }
+        .jn-hero-anim { animation: jn-hero-fade 0.8s ease-out both; }
+        .jn-hero-anim-delay { animation: jn-hero-fade 0.8s ease-out 0.2s both; }
+        @keyframes jn-hero-fade {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
       `}</style>
 
       <div className="jn-root" style={styles.shell}>
@@ -127,11 +133,11 @@ export default function Tienda() {
             <div style={styles.heroBadge}>
               <Sparkles size={14} /> Calidad premium
             </div>
-            <h1 className="jn-display" style={styles.heroTitle}>
+            <h1 className="jn-display jn-hero-anim" style={styles.heroTitle}>
               Mates únicos,<br />
               <span style={styles.heroHighlight}>experiencias reales</span>
             </h1>
-            <p style={styles.heroDesc}>
+            <p className="jn-hero-anim-delay" style={styles.heroDesc}>
               Amor y dedicación en cada producto, para acompañarte en cada momento.
             </p>
           </div>
