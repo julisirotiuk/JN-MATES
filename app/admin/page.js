@@ -525,6 +525,8 @@ function TabStock({ productos, categorias, onRefresh }) {
   const [form, setForm] = useState(emptyProducto);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [preview, setPreview] = useState("");
 
   const nombresCat = ["Todas", ...categorias.map((c) => c.nombre)];
 
@@ -536,14 +538,39 @@ function TabStock({ productos, categorias, onRefresh }) {
 
   const unidadesTotal = filtrados.reduce((s, p) => s + Number(p.stock || 0), 0);
 
-  const abrirNuevo = () => { setForm(emptyProducto); setShowForm(true); };
+  const abrirNuevo = () => { setForm(emptyProducto); setPreview(""); setShowForm(true); };
   const abrirEditar = (p) => {
     setForm({
       id: p.id, nombre: p.nombre || "", categoria_id: p.categoria_id || "",
       precio: p.precio ?? "", costo: p.costo ?? "", stock: p.stock ?? "",
       material: p.material || "", imagen_url: p.imagen_url || "", activo: p.activo,
     });
+    setPreview(p.imagen_url || "");
     setShowForm(true);
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setPreview(URL.createObjectURL(file));
+
+    const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
+    const { data, error } = await supabase.storage
+      .from("productos")
+      .upload(fileName, file);
+
+    if (error) {
+      setUploading(false);
+      return;
+    }
+
+    const { data: urlData } = supabase.storage
+      .from("productos")
+      .getPublicUrl(fileName);
+
+    setForm({ ...form, imagen_url: urlData.publicUrl });
+    setUploading(false);
   };
 
   const guardar = async (e) => {
@@ -649,8 +676,31 @@ function TabStock({ productos, categorias, onRefresh }) {
             <label style={styles.label}>Material</label>
             <input value={form.material} onChange={(e) => setForm({ ...form, material: e.target.value })} style={styles.input} />
 
-            <label style={styles.label}>URL de imagen</label>
-            <input value={form.imagen_url} onChange={(e) => setForm({ ...form, imagen_url: e.target.value })} style={styles.input} />
+            <label style={styles.label}>Imagen del producto</label>
+            <div style={styles.imageUploadContainer}>
+              {preview && (
+                <div style={styles.imagePreview}>
+                  <img src={preview} alt="Preview" style={styles.previewImg} />
+                  <button
+                    type="button"
+                    onClick={() => { setPreview(""); setForm({ ...form, imagen_url: "" }); }}
+                    style={styles.removeImgBtn}
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+              <label style={styles.uploadBtn}>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  style={{ display: "none" }}
+                  disabled={uploading}
+                />
+                {uploading ? "Subiendo..." : preview ? "Cambiar imagen" : "Seleccionar de galería"}
+              </label>
+            </div>
 
             <label style={{ ...styles.label, display: "flex", alignItems: "center", gap: 8 }}>
               <input type="checkbox" checked={form.activo} onChange={(e) => setForm({ ...form, activo: e.target.checked })} />
@@ -1134,6 +1184,53 @@ const styles = {
   input: {
     background: "#16201a", border: "1px solid #33422f", borderRadius: 8, padding: "9px 11px",
     color: "#f0ece0", fontSize: 14, outline: "none", width: "100%",
+  },
+  imageUploadContainer: {
+    marginTop: 4,
+  },
+  imagePreview: {
+    position: "relative",
+    width: 120,
+    height: 120,
+    marginBottom: 10,
+    borderRadius: 10,
+    overflow: "hidden",
+    border: "1px solid #33422f",
+  },
+  previewImg: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+  },
+  removeImgBtn: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    background: "rgba(0,0,0,0.6)",
+    color: "#fff",
+    border: "none",
+    borderRadius: "50%",
+    width: 24,
+    height: 24,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    fontSize: 12,
+  },
+  uploadBtn: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+    background: "#1f2c22",
+    color: "#f0ece0",
+    border: "1px solid #33422f",
+    borderRadius: 8,
+    padding: "10px 16px",
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: "pointer",
+    transition: "all .15s ease",
   },
   modalActions: { display: "flex", gap: 10, marginTop: 18 },
   cancelBtn: {
