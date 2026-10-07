@@ -335,31 +335,6 @@ function TabResumen({ productos, ventas, compras, gastos, categorias }) {
         </div>
       </div>
 
-      {/* Control de caja GENERAL */}
-      <div style={{ marginTop: 22, marginBottom: 8, color: "#f0ece0", fontWeight: 700, fontSize: 15 }}>
-        Control de caja — GENERAL (ventas + compras + gastos)
-      </div>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {MEDIOS.map((m) => {
-          const c = cajaGeneral[m.id];
-          const saldo = c.entra - c.sale;
-          return (
-            <div key={m.id} style={styles.row}>
-              <div style={{ flex: 1 }}>
-                <div style={styles.rowName}>{m.label}</div>
-                <div style={styles.rowMeta}>Entra {money(c.entra)} · Sale {money(c.sale)}</div>
-              </div>
-              <div style={{ fontWeight: 700, color: saldo >= 0 ? "#7ba15a" : "#e08a7d" }}>
-                {money(saldo)}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      <div style={styles.smallMuted}>
-        Esto es lo que el sistema calcula que deberías tener en cada medio. Comparalo con la plata real para ver si coincide.
-      </div>
     </div>
   );
 }
@@ -618,7 +593,7 @@ function TabStock({ productos, categorias, onRefresh }) {
 // COMPRAR (reponer stock, o cargar un gasto particular)
 // ============================================================
 function TabComprar({ productos, onRefresh }) {
-  const [modo, setModo] = useState("stock"); // 'stock' | 'gasto' | 'gasto_extra'
+  const [modo, setModo] = useState("stock"); // 'stock' | 'gasto'
   const [productoId, setProductoId] = useState("");
   const [cantidad, setCantidad] = useState("");
   const [costoUnitario, setCostoUnitario] = useState("");
@@ -651,18 +626,11 @@ function TabComprar({ productos, onRefresh }) {
 
       setOk(`Se sumaron ${cant} unidades de "${producto.nombre}" al stock.`);
       setProductoId(""); setCantidad(""); setCostoUnitario("");
-    } else if (modo === "gasto") {
+    } else {
       await supabase.from("gastos").insert({
         descripcion, monto: Number(monto) || 0, medio_pago: origenFondos, fecha,
       });
       setOk("Gasto registrado.");
-      setDescripcion(""); setMonto("");
-    } else {
-      // Gasto extra
-      await supabase.from("gastos").insert({
-        descripcion: `[Extra] ${descripcion}`, monto: Number(monto) || 0, medio_pago: origenFondos, fecha,
-      });
-      setOk("Gasto extra registrado.");
       setDescripcion(""); setMonto("");
     }
 
@@ -674,8 +642,7 @@ function TabComprar({ productos, onRefresh }) {
     <div>
       <div style={styles.toggleRow}>
         <button onClick={() => setModo("stock")} style={styles.toggleBtn(modo === "stock")}>Compra de stock</button>
-        <button onClick={() => setModo("gasto")} style={styles.toggleBtn(modo === "gasto")}>Gasto</button>
-        <button onClick={() => setModo("gasto_extra")} style={styles.toggleBtn(modo === "gasto_extra")}>Gasto extra</button>
+        <button onClick={() => setModo("gasto")} style={styles.toggleBtn(modo === "gasto")}>Gastos</button>
       </div>
 
       <form onSubmit={registrar} style={styles.card}>
@@ -726,7 +693,7 @@ function TabComprar({ productos, onRefresh }) {
         {ok && <div style={styles.okMsg}>{ok}</div>}
 
         <button type="submit" disabled={saving} style={{ ...styles.saveBtn, marginTop: 16 }}>
-          {saving ? "Guardando..." : modo === "stock" ? "Registrar compra" : modo === "gasto" ? "Registrar gasto" : "Registrar gasto extra"}
+          {saving ? "Guardando..." : modo === "stock" ? "Registrar compra" : "Registrar gasto"}
         </button>
       </form>
     </div>
