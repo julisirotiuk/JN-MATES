@@ -85,7 +85,7 @@ export default function Checkout() {
       console.error("Error enviando email:", error);
     }
 
-    cart.clear();
+    cart.clearCart();
     setSaving(false);
   };
 
