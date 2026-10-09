@@ -50,16 +50,40 @@ export default function Checkout() {
     const newOrderId = `JN-${Date.now().toString().slice(-6)}`;
     setOrderId(newOrderId);
 
-    // Enviar email a julisirotiuk@gmail.com
-    const emailData = {
-      to: "julisirotiuk@gmail.com",
-      subject: `Nuevo pedido ${newOrderId} - JN MATES`,
-      body: `Pedido: ${newOrderId}\nNombre: ${nombre} ${apellido}\nProvincia: ${provincia}\nLocalidad: ${localidad}\nTeléfono: ${codigoArea} ${telefono}\n\nProductos:\n${cart.items.map((i) => `• ${i.nombre} x${i.cantidad} - ${money(i.precio * i.cantidad)}`).join("\n")}\n\nTotal: ${money(cart.total)}`,
-    };
+    // Enviar email automático a julisirotiuk@gmail.com
+    const emailHtml = `
+      <div style="font-family: Inter, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #2d2a26; margin-bottom: 20px;">Nuevo pedido ${newOrderId}</h2>
+        <div style="background: #f5f0e8; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+          <p style="margin: 4px 0;"><strong>Nombre:</strong> ${nombre} ${apellido}</p>
+          <p style="margin: 4px 0;"><strong>Provincia:</strong> ${provincia}</p>
+          <p style="margin: 4px 0;"><strong>Localidad:</strong> ${localidad}</p>
+          <p style="margin: 4px 0;"><strong>Teléfono:</strong> ${codigoArea} ${telefono}</p>
+        </div>
+        <div style="background: #fff; padding: 16px; border-radius: 8px; border: 1px solid #e0dcd0;">
+          <h3 style="color: #2d2a26; margin-bottom: 12px;">Productos</h3>
+          ${cart.items.map((i) => `<p style="margin: 4px 0; display: flex; justify-content: space-between;"><span>${i.nombre} x${i.cantidad}</span><span>${money(i.precio * i.cantidad)}</span></p>`).join("")}
+          <div style="border-top: 1px solid #e0dcd0; margin-top: 12px; padding-top: 12px; display: flex; justify-content: space-between; font-weight: 700;">
+            <span>Total</span>
+            <span style="color: #4c8a3f;">${money(cart.total)}</span>
+          </div>
+        </div>
+      </div>
+    `;
 
-    // Enviar email usando un servicio de email (SendGrid, Mailgun, Resend)
-    // Por ahora solo mostramos confirmación
-    console.log("Email enviado a:", emailData.to);
+    try {
+      await fetch("/api/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: "julisirotiuk@gmail.com",
+          subject: `Nuevo pedido ${newOrderId} - JN MATES`,
+          html: emailHtml,
+        }),
+      });
+    } catch (error) {
+      console.error("Error enviando email:", error);
+    }
 
     cart.clear();
     setSaving(false);

@@ -120,7 +120,7 @@ export default function AdminPanel() {
         ) : tab === "caja" ? (
           <TabCaja movimientos={movimientos} onRefresh={cargarTodo} />
         ) : tab === "registro" ? (
-          <TabRegistro ventas={ventas} movimientos={movimientos} compras={compras} />
+          <TabRegistro ventas={ventas} movimentos={movimientos} compras={compras} onRefresh={cargarTodo} />
         ) : tab === "stock" ? (
           <TabStock productos={productos} categorias={categorias} onRefresh={cargarTodo} />
         ) : tab === "comprar" ? (
@@ -349,10 +349,18 @@ function TabResumen({ productos, ventas, compras, gastos, categorias }) {
 // ============================================================
 // REGISTRO DE VENTAS
 // ============================================================
-function TabRegistro({ ventas, movimientos, compras }) {
+function TabRegistro({ ventas, movimientos, compras, onRefresh }) {
   const [busqueda, setBusqueda] = useState("");
   const [filtroVendedor, setFiltroVendedor] = useState("todos");
   const [filtroTipo, setFiltroTipo] = useState("todos"); // 'todos' | 'ventas' | 'compras' | 'movimientos'
+
+  const borrarRegistro = async (tipo, id) => {
+    if (!confirm("¿Borrar este registro? Esta acción no se puede deshacer.")) return;
+    if (tipo === "venta") await supabase.from("ventas").delete().eq("id", id);
+    else if (tipo === "compra") await supabase.from("compras").delete().eq("id", id);
+    else if (tipo === "movimiento") await supabase.from("movimientos_caja").delete().eq("id", id);
+    onRefresh();
+  };
 
   const vendedores = [...new Set(ventas.map((v) => v.vendedor).filter(Boolean))];
 
@@ -457,17 +465,20 @@ function TabRegistro({ ventas, movimientos, compras }) {
                   <div style={styles.ventaHora}>{formatearHora(v.created_at)}</div>
                 </div>
               </div>
-              <div style={{ display: "flex", gap: 16, marginTop: 8, fontSize: 12, color: "#8fa085" }}>
-                {v.comprador && (
-                  <span>👤 {v.comprador}</span>
-                )}
-                {v.vendedor && (
-                  <span>🏷️ {v.vendedor}</span>
-                )}
-                <span>💳 {medioLabel(v.medio_pago)}</span>
-                {v.tipo_venta && (
-                  <span>{v.tipo_venta === "web" ? "🌐 Web" : "👥 Persona"}</span>
-                )}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
+                <div style={{ display: "flex", gap: 16, fontSize: 12, color: "#8fa085" }}>
+                  {v.comprador && (
+                    <span>👤 {v.comprador}</span>
+                  )}
+                  {v.vendedor && (
+                    <span>🏷️ {v.vendedor}</span>
+                  )}
+                  <span>💳 {medioLabel(v.medio_pago)}</span>
+                  {v.tipo_venta && (
+                    <span>{v.tipo_venta === "web" ? "🌐 Web" : "👥 Persona"}</span>
+                  )}
+                </div>
+                <button onClick={() => borrarRegistro("venta", v.id)} style={styles.deleteBtn}>🗑️</button>
               </div>
             </div>
           ))}
@@ -484,8 +495,9 @@ function TabRegistro({ ventas, movimientos, compras }) {
                   <div style={styles.ventaFecha}>{formatearFecha(c.fecha)}</div>
                 </div>
               </div>
-              <div style={{ display: "flex", gap: 16, marginTop: 8, fontSize: 12, color: "#8fa085" }}>
-                <span>💳 {medioLabel(c.medio_pago)}</span>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
+                <span style={{ fontSize: 12, color: "#8fa085" }}>💳 {medioLabel(c.medio_pago)}</span>
+                <button onClick={() => borrarRegistro("compra", c.id)} style={styles.deleteBtn}>🗑️</button>
               </div>
             </div>
           ))}
@@ -502,11 +514,14 @@ function TabRegistro({ ventas, movimientos, compras }) {
                   <div style={styles.ventaFecha}>{formatearFecha(m.fecha)}</div>
                 </div>
               </div>
-              <div style={{ display: "flex", gap: 16, marginTop: 8, fontSize: 12, color: "#8fa085" }}>
-                <span>💰 {money(m.monto)}</span>
-                {m.motivo && (
-                  <span>📝 {m.motivo}</span>
-                )}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
+                <div style={{ display: "flex", gap: 16, fontSize: 12, color: "#8fa085" }}>
+                  <span>💰 {money(m.monto)}</span>
+                  {m.motivo && (
+                    <span>📝 {m.motivo}</span>
+                  )}
+                </div>
+                <button onClick={() => borrarRegistro("movimiento", m.id)} style={styles.deleteBtn}>🗑️</button>
               </div>
             </div>
           ))}
@@ -1150,6 +1165,16 @@ function TabCaja({ movimientos, onRefresh }) {
 
 const styles = {
   bg: { minHeight: "100vh", background: "#131c15", fontFamily: "Inter, system-ui, sans-serif", paddingBottom: 78 },
+  deleteBtn: {
+    background: "rgba(224, 138, 125, 0.1)",
+    border: "1px solid rgba(224, 138, 125, 0.3)",
+    color: "#e08a7d",
+    fontSize: 14,
+    cursor: "pointer",
+    padding: 4,
+    borderRadius: 6,
+    lineHeight: 1,
+  },
   shell: { maxWidth: 640, margin: "0 auto", padding: "18px 16px 30px" },
   header: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 },
   logoRow: { display: "flex", alignItems: "center", gap: 10 },
