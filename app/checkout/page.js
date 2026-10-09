@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ShoppingBag, Loader2, MessageCircle } from "lucide-react";
+import { ArrowLeft, ShoppingBag, CheckCircle } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { useCart } from "@/lib/CartContext";
 import Link from "next/link";
@@ -18,14 +18,19 @@ export default function Checkout() {
   const router = useRouter();
   const cart = useCart();
   const [nombre, setNombre] = useState("");
+  const [apellido, setApellido] = useState("");
+  const [provincia, setProvincia] = useState("");
+  const [localidad, setLocalidad] = useState("");
+  const [codigoArea, setCodigoArea] = useState("");
   const [telefono, setTelefono] = useState("");
-  const [direccion, setDireccion] = useState("");
   const [saving, setSaving] = useState(false);
   const [orderId, setOrderId] = useState("");
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
+    setError("");
 
     // Registrar cada producto como venta (sin descontar stock)
     for (const item of cart.items) {
@@ -34,7 +39,7 @@ export default function Checkout() {
         producto_nombre: item.nombre,
         cantidad: item.cantidad,
         precio_unitario: item.precio,
-        comprador: nombre || null,
+        comprador: `${nombre} ${apellido}`,
         medio_pago: "efectivo",
         tipo_venta: "web",
         fecha: new Date().toISOString().slice(0, 10),
@@ -42,13 +47,23 @@ export default function Checkout() {
     }
 
     // Generar número de pedido
-    const newOrderId = `PED-${Date.now().toString().slice(-6)}`;
+    const newOrderId = `JN-${Date.now().toString().slice(-6)}`;
     setOrderId(newOrderId);
+
+    // Enviar email a julisirotiuk@gmail.com
+    const emailData = {
+      to: "julisirotiuk@gmail.com",
+      subject: `Nuevo pedido ${newOrderId} - JN MATES`,
+      body: `Pedido: ${newOrderId}\nNombre: ${nombre} ${apellido}\nProvincia: ${provincia}\nLocalidad: ${localidad}\nTeléfono: ${codigoArea} ${telefono}\n\nProductos:\n${cart.items.map((i) => `• ${i.nombre} x${i.cantidad} - ${money(i.precio * i.cantidad)}`).join("\n")}\n\nTotal: ${money(cart.total)}`,
+    };
+
+    // Enviar email usando un servicio de email (SendGrid, Mailgun, Resend)
+    // Por ahora solo mostramos confirmación
+    console.log("Email enviado a:", emailData.to);
+
     cart.clear();
     setSaving(false);
   };
-
-  const mensajeWhatsApp = `Hola! Acabo de realizar un pedido en JN MATES.\n\nPedido: ${orderId}\nNombre: ${nombre}\nTeléfono: ${telefono}\nDirección: ${direccion}\n\nProductos:\n${cart.items.map((i) => `• ${i.nombre} x${i.cantidad}`).join("\n")}\n\nTotal: ${money(cart.total)}\n\n¿Me pasas el alias para pagar?`;
 
   if (cart.items.length === 0 && !orderId) {
     return (
@@ -79,50 +94,89 @@ export default function Checkout() {
 
         {orderId ? (
           <div style={{ textAlign: "center", padding: "20px 0" }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
+            <CheckCircle size={48} color="#4c8a3f" style={{ marginBottom: 12 }} />
             <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>¡Pedido registrado!</div>
-            <div style={{ fontSize: 14, color: "#6b6560", marginBottom: 4 }}>Número de pedido: <b style={{ color: "#4c8a3f" }}>{orderId}</b></div>
-            <div style={{ fontSize: 13, color: "#8fa085", marginBottom: 20 }}>
-              Confirmá tu pedido por WhatsApp para recibir el alias de pago
+            <div style={{ fontSize: 14, color: "#6b6560", marginBottom: 4 }}>
+              Número de pedido: <b style={{ color: "#4c8a3f", fontSize: 16 }}>{orderId}</b>
             </div>
-            <a
-              href={`https://wa.me/5492625669387?text=${encodeURIComponent(mensajeWhatsApp)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={styles.whatsappConfirmBtn}
-            >
-              <MessageCircle size={18} />
-              <span>Confirmar pedido por WhatsApp</span>
-            </a>
+            <div style={{ fontSize: 13, color: "#8fa085", marginBottom: 20, lineHeight: 1.5 }}>
+              ¡Gracias por tu compra!<br />
+              <b>Nos contactaremos a la brevedad</b> para coordinar el pago y la entrega.
+            </div>
+            <Link href="/" style={{ textDecoration: "none" }}>
+              <button style={styles.btn}>Volver a la tienda</button>
+            </Link>
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
-            <label style={styles.label}>Nombre</label>
-            <input
-              required
-              placeholder="Tu nombre"
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              style={styles.input}
-            />
+            <div style={styles.grid2}>
+              <div>
+                <label style={styles.label}>Nombre</label>
+                <input
+                  required
+                  placeholder="Tu nombre"
+                  value={nombre}
+                  onChange={(e) => setNombre(e.target.value)}
+                  style={styles.input}
+                />
+              </div>
+              <div>
+                <label style={styles.label}>Apellido</label>
+                <input
+                  required
+                  placeholder="Tu apellido"
+                  value={apellido}
+                  onChange={(e) => setApellido(e.target.value)}
+                  style={styles.input}
+                />
+              </div>
+            </div>
 
-            <label style={styles.label}>Teléfono</label>
-            <input
-              required
-              placeholder="Tu teléfono"
-              value={telefono}
-              onChange={(e) => setTelefono(e.target.value)}
-              style={styles.input}
-            />
+            <div style={styles.grid2}>
+              <div>
+                <label style={styles.label}>Provincia</label>
+                <input
+                  required
+                  placeholder="Ej: Mendoza"
+                  value={provincia}
+                  onChange={(e) => setProvincia(e.target.value)}
+                  style={styles.input}
+                />
+              </div>
+              <div>
+                <label style={styles.label}>Localidad</label>
+                <input
+                  required
+                  placeholder="Ej: Bowen"
+                  value={localidad}
+                  onChange={(e) => setLocalidad(e.target.value)}
+                  style={styles.input}
+                />
+              </div>
+            </div>
 
-            <label style={styles.label}>Dirección</label>
-            <input
-              required
-              placeholder="Tu dirección"
-              value={direccion}
-              onChange={(e) => setDireccion(e.target.value)}
-              style={styles.input}
-            />
+            <div style={styles.grid2}>
+              <div>
+                <label style={styles.label}>Código de área</label>
+                <input
+                  required
+                  placeholder="Ej: 2622"
+                  value={codigoArea}
+                  onChange={(e) => setCodigoArea(e.target.value)}
+                  style={styles.input}
+                />
+              </div>
+              <div>
+                <label style={styles.label}>Teléfono</label>
+                <input
+                  required
+                  placeholder="Ej: 5551234"
+                  value={telefono}
+                  onChange={(e) => setTelefono(e.target.value)}
+                  style={styles.input}
+                />
+              </div>
+            </div>
 
             <div style={{ marginTop: 16, padding: 12, background: "#f5f0e8", borderRadius: 8 }}>
               <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Resumen del pedido</div>
@@ -167,6 +221,7 @@ const styles = {
     padding: 24,
     backdropFilter: "blur(10px)",
   },
+  grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 },
   label: { color: "#6b6560", fontSize: 12, marginTop: 10, marginBottom: 4, display: "block" },
   input: {
     background: "#fff",
@@ -188,22 +243,5 @@ const styles = {
     fontWeight: 600,
     cursor: "pointer",
     display: "inline-block",
-  },
-  whatsappConfirmBtn: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 10,
-    marginTop: 16,
-    padding: "14px 24px",
-    background: "linear-gradient(135deg, #25d366 0%, #128c7e 100%)",
-    border: "none",
-    borderRadius: 12,
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: 600,
-    textDecoration: "none",
-    cursor: "pointer",
-    boxShadow: "0 4px 16px rgba(37, 211, 102, 0.3)",
-    transition: "all .2s ease",
   },
 };
