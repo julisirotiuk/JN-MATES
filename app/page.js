@@ -301,7 +301,8 @@ export default function Tienda() {
           <div style={styles.footerText}>Calidad que se nota</div>
           <div style={styles.footerInfo}>
             <span>📍 Bowen, Mendoza</span>
-            <span>🚚 Envíos a coordinar a General Alvear y San Rafael</span>
+            <span>🚚 Envíos a todo el país</span>
+            <span>📦 Envíos a coordinar a General Alvear y San Rafael</span>
           </div>
           <a
             href="https://instagram.com/jn.matess"
