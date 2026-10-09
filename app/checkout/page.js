@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ShoppingBag, Loader2 } from "lucide-react";
+import { ArrowLeft, ShoppingBag, Loader2, MessageCircle } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { useCart } from "@/lib/CartContext";
 import Link from "next/link";
@@ -21,45 +21,36 @@ export default function Checkout() {
   const [telefono, setTelefono] = useState("");
   const [direccion, setDireccion] = useState("");
   const [saving, setSaving] = useState(false);
-  const [ok, setOk] = useState("");
+  const [orderId, setOrderId] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
-    setOk("");
 
-    // Registrar cada producto como venta
+    // Registrar cada producto como venta (sin descontar stock)
     for (const item of cart.items) {
-      const { data: producto } = await supabase
-        .from("productos")
-        .select("id, stock, precio")
-        .eq("id", item.id)
-        .single();
-
-      if (producto) {
-        await supabase.from("ventas").insert({
-          producto_id: producto.id,
-          producto_nombre: item.nombre,
-          cantidad: item.cantidad,
-          precio_unitario: item.precio,
-          comprador: nombre || null,
-          medio_pago: "efectivo",
-          tipo_venta: "web",
-          fecha: new Date().toISOString().slice(0, 10),
-        });
-
-        await supabase.from("productos").update({
-          stock: Number(producto.stock || 0) - item.cantidad,
-        }).eq("id", producto.id);
-      }
+      await supabase.from("ventas").insert({
+        producto_id: item.id,
+        producto_nombre: item.nombre,
+        cantidad: item.cantidad,
+        precio_unitario: item.precio,
+        comprador: nombre || null,
+        medio_pago: "efectivo",
+        tipo_venta: "web",
+        fecha: new Date().toISOString().slice(0, 10),
+      });
     }
 
-    setOk("¡Pedido registrado! Te contactaremos pronto.");
+    // Generar número de pedido
+    const newOrderId = `PED-${Date.now().toString().slice(-6)}`;
+    setOrderId(newOrderId);
     cart.clear();
     setSaving(false);
   };
 
-  if (cart.items.length === 0 && !ok) {
+  const mensajeWhatsApp = `Hola! Acabo de realizar un pedido en JN MATES.\n\nPedido: ${orderId}\nNombre: ${nombre}\nTeléfono: ${telefono}\nDirección: ${direccion}\n\nProductos:\n${cart.items.map((i) => `• ${i.nombre} x${i.cantidad}`).join("\n")}\n\nTotal: ${money(cart.total)}\n\n¿Me pasas el alias para pagar?`;
+
+  if (cart.items.length === 0 && !orderId) {
     return (
       <div style={styles.container}>
         <div style={styles.card}>
@@ -86,13 +77,23 @@ export default function Checkout() {
           <span style={{ fontSize: 18, fontWeight: 700 }}>Finalizar pedido</span>
         </div>
 
-        {ok ? (
+        {orderId ? (
           <div style={{ textAlign: "center", padding: "20px 0" }}>
             <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
-            <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>{ok}</div>
-            <Link href="/" style={{ textDecoration: "none" }}>
-              <button style={styles.btn}>Volver a la tienda</button>
-            </Link>
+            <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>¡Pedido registrado!</div>
+            <div style={{ fontSize: 14, color: "#6b6560", marginBottom: 4 }}>Número de pedido: <b style={{ color: "#4c8a3f" }}>{orderId}</b></div>
+            <div style={{ fontSize: 13, color: "#8fa085", marginBottom: 20 }}>
+              Confirmá tu pedido por WhatsApp para recibir el alias de pago
+            </div>
+            <a
+              href={`https://wa.me/5492625669387?text=${encodeURIComponent(mensajeWhatsApp)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={styles.whatsappConfirmBtn}
+            >
+              <MessageCircle size={18} />
+              <span>Confirmar pedido por WhatsApp</span>
+            </a>
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
@@ -187,5 +188,22 @@ const styles = {
     fontWeight: 600,
     cursor: "pointer",
     display: "inline-block",
+  },
+  whatsappConfirmBtn: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 16,
+    padding: "14px 24px",
+    background: "linear-gradient(135deg, #25d366 0%, #128c7e 100%)",
+    border: "none",
+    borderRadius: 12,
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: 600,
+    textDecoration: "none",
+    cursor: "pointer",
+    boxShadow: "0 4px 16px rgba(37, 211, 102, 0.3)",
+    transition: "all .2s ease",
   },
 };
