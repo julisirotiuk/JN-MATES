@@ -162,6 +162,24 @@ function TabResumen({ productos, ventas, compras, gastos, categorias }) {
 
   const stockBajo = productos.filter((p) => Number(p.stock || 0) <= 2 && p.activo);
 
+  // Resumen por mes
+  const ventasPorMes = useMemo(() => {
+    const meses = {};
+    ventas.forEach((v) => {
+      const key = v.fecha ? v.fecha.slice(0, 7) : "Sin fecha";
+      if (!meses[key]) meses[key] = { vendido: 0, cantidad: 0 };
+      meses[key].vendido += Number(v.precio_unitario) * Number(v.cantidad);
+      meses[key].cantidad += Number(v.cantidad);
+    });
+    return Object.entries(meses)
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([mes, data]) => ({
+        mes,
+        label: new Date(mes + "-01").toLocaleDateString("es-AR", { month: "long", year: "numeric" }),
+        ...data,
+      }));
+  }, [ventas]);
+
   // Clasificar ventas por categoría
   const ventasYerba = ventas.filter((v) => {
     const prod = productos.find((p) => p.id === v.producto_id);
@@ -269,6 +287,26 @@ function TabResumen({ productos, ventas, compras, gastos, categorias }) {
           </div>
         </div>
       )}
+
+      {/* Ventas por mes */}
+      {ventasPorMes.length > 0 && (
+        <div style={{ marginTop: 22, marginBottom: 8, color: "#f0ece0", fontWeight: 700, fontSize: 15 }}>
+          Ventas por mes
+        </div>
+      )}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {ventasPorMes.map((m) => (
+          <div key={m.mes} style={styles.row}>
+            <div style={{ flex: 1 }}>
+              <div style={styles.rowName}>{m.label}</div>
+              <div style={styles.rowMeta}>{m.cantidad} unidades vendidas</div>
+            </div>
+            <div style={{ fontWeight: 700, color: "#7ba15a" }}>
+              {money(m.vendido)}
+            </div>
+          </div>
+        ))}
+      </div>
 
       {/* Ganancia real */}
       <div style={{ ...styles.card, marginTop: 18 }}>
