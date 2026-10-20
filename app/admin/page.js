@@ -61,8 +61,8 @@ export default function AdminPanel() {
       supabase.from("ventas").select("*").order("fecha", { ascending: false }).order("created_at", { ascending: false }).limit(200),
       supabase.from("compras").select("*").order("fecha", { ascending: false }).limit(200),
       supabase.from("gastos").select("*").order("fecha", { ascending: false }).limit(200),
-      supabase.from("movimientos_caja").select("*").order("fecha", { ascending: false }).limit(200).catch(() => ({ data: [], error: null })),
-    ]);
+      supabase.from("movimientos_caja").select("*").order("fecha", { ascending: false }).limit(200),
+    ].map(p => p.catch(() => ({ data: [], error: null }))));
     setProductos(prodsRes.data || []);
     setCategorias(catsRes.data || []);
     setVentas(vRes.data || []);
