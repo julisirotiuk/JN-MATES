@@ -53,22 +53,32 @@ export default function AdminPanel() {
     })();
   }, [router]);
 
+  const safeQuery = async (query) => {
+    try {
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    } catch {
+      return [];
+    }
+  };
+
   const cargarTodo = async () => {
     setLoading(true);
-    const [prodsRes, catsRes, vRes, cRes, gRes, mRes] = await Promise.all([
-      supabase.from("productos").select("*").order("nombre", { ascending: true }),
-      supabase.from("categorias").select("*").order("nombre", { ascending: true }),
-      supabase.from("ventas").select("*").order("fecha", { ascending: false }).order("created_at", { ascending: false }).limit(200),
-      supabase.from("compras").select("*").order("fecha", { ascending: false }).limit(200),
-      supabase.from("gastos").select("*").order("fecha", { ascending: false }).limit(200),
-      supabase.from("movimientos_caja").select("*").order("fecha", { ascending: false }).limit(200),
-    ].map(p => p.catch(() => ({ data: [], error: null }))));
-    setProductos(prodsRes.data || []);
-    setCategorias(catsRes.data || []);
-    setVentas(vRes.data || []);
-    setCompras(cRes.data || []);
-    setGastos(gRes.data || []);
-    setMovimientos(mRes.data || []);
+    const [prods, cats, v, c, g, m] = await Promise.all([
+      safeQuery(supabase.from("productos").select("*").order("nombre", { ascending: true })),
+      safeQuery(supabase.from("categorias").select("*").order("nombre", { ascending: true })),
+      safeQuery(supabase.from("ventas").select("*").order("fecha", { ascending: false }).order("created_at", { ascending: false }).limit(200)),
+      safeQuery(supabase.from("compras").select("*").order("fecha", { ascending: false }).limit(200)),
+      safeQuery(supabase.from("gastos").select("*").order("fecha", { ascending: false }).limit(200)),
+      safeQuery(supabase.from("movimientos_caja").select("*").order("fecha", { ascending: false }).limit(200)),
+    ]);
+    setProductos(prods);
+    setCategorias(cats);
+    setVentas(v);
+    setCompras(c);
+    setGastos(g);
+    setMovimientos(m);
     setLoading(false);
   };
 
