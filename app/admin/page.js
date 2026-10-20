@@ -55,20 +55,20 @@ export default function AdminPanel() {
 
   const cargarTodo = async () => {
     setLoading(true);
-    const [{ data: prods }, { data: cats }, { data: v }, { data: c }, { data: g }, { data: m }] = await Promise.all([
+    const [prodsRes, catsRes, vRes, cRes, gRes, mRes] = await Promise.all([
       supabase.from("productos").select("*").order("nombre", { ascending: true }),
       supabase.from("categorias").select("*").order("nombre", { ascending: true }),
       supabase.from("ventas").select("*").order("fecha", { ascending: false }).order("created_at", { ascending: false }).limit(200),
       supabase.from("compras").select("*").order("fecha", { ascending: false }).limit(200),
       supabase.from("gastos").select("*").order("fecha", { ascending: false }).limit(200),
-      supabase.from("movimientos_caja").select("*").order("fecha", { ascending: false }).limit(200),
+      supabase.from("movimientos_caja").select("*").order("fecha", { ascending: false }).limit(200).catch(() => ({ data: [], error: null })),
     ]);
-    setProductos(prods || []);
-    setCategorias(cats || []);
-    setVentas(v || []);
-    setCompras(c || []);
-    setGastos(g || []);
-    setMovimientos(m || []);
+    setProductos(prodsRes.data || []);
+    setCategorias(catsRes.data || []);
+    setVentas(vRes.data || []);
+    setCompras(cRes.data || []);
+    setGastos(gRes.data || []);
+    setMovimientos(mRes.data || []);
     setLoading(false);
   };
 
