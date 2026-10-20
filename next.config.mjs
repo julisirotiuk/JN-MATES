@@ -1,6 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  /* config options here */
+  allowedDevOrigins: [
+    "localhost:3000",
+    "192.168.100.6:3000",
+    "pusher-aftermost-clapped.ngrok-free.dev",
+  ],
 };
 
 export default nextConfig;

@@ -412,7 +412,7 @@ function TabRegistro({ ventas, movimientos, compras, onRefresh }) {
 
   const vendedores = [...new Set(ventas.map((v) => v.vendedor).filter(Boolean))];
 
-  const filtradas = ventas.filter((v) => {
+  const filtradas = (ventas || []).filter((v) => {
     const okBusq = v.producto_nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
                    v.comprador?.toLowerCase().includes(busqueda.toLowerCase()) ||
                    v.vendedor?.toLowerCase().includes(busqueda.toLowerCase());
@@ -421,13 +421,13 @@ function TabRegistro({ ventas, movimientos, compras, onRefresh }) {
     return okBusq && okVendedor && okTipo;
   });
 
-  const filtradasCompras = compras.filter((c) => {
+  const filtradasCompras = (compras || []).filter((c) => {
     const okBusq = c.producto_nombre?.toLowerCase().includes(busqueda.toLowerCase());
     const okTipo = filtroTipo === "todos" || filtroTipo === "compras";
     return okBusq && okTipo;
   });
 
-  const filtradosMovimientos = movimientos.filter((m) => {
+  const filtradosMovimientos = (movimientos || []).filter((m) => {
     const okBusq = m.motivo?.toLowerCase().includes(busqueda.toLowerCase()) ||
                    m.desde?.toLowerCase().includes(busqueda.toLowerCase()) ||
                    m.hacia?.toLowerCase().includes(busqueda.toLowerCase());
